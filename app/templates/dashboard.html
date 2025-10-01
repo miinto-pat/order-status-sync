@@ -11,16 +11,20 @@
         <a class="navbar-brand" href="#">Bot Dashboard</a>
         <div class="d-flex">
             <span class="navbar-text me-3 text-white">{{ current_user.id }}</span>
-            <a class="btn btn-outline-light" href="{{ url_for('logout') }}">Logout</a>
+            <a class="btn btn-outline-light" href="{{ url_for('bp.logout') }}">Logout</a>
         </div>
     </div>
 </nav>
 
+
 <div class="container mt-5">
     <h3>Run Bot</h3>
-    <form method="post" action="{{ url_for('run_bot') }}">
-        <button type="submit" class="btn btn-success mb-3">Run Bot</button>
-    </form>
+    <form id="runBotForm">
+    <button type="submit" id="runBotBtn" class="btn btn-success mb-3">Run Bot</button>
+</form>
+<!-- Status message under button -->
+<div id="progressMessage" class="alert alert-info mt-2">Idle</div>
+
 
     {% with messages = get_flashed_messages() %}
     {% if messages %}
@@ -29,6 +33,43 @@
         </div>
     {% endif %}
     {% endwith %}
+<script>
+document.getElementById("runBotForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    const btn = document.getElementById("runBotBtn");
+    const msgDiv = document.getElementById("progressMessage");
+
+    btn.disabled = true;
+    msgDiv.innerText = "Starting bot...";
+
+    // Start the bot
+    fetch("{{ url_for('bp.run_bot') }}", { method: "POST", credentials: "same-origin" })
+        .then(resp => resp.json())
+        .then(data => {
+            msgDiv.innerText = data.message; // "Bot started..."
+
+            // Poll for bot status every second
+            const interval = setInterval(() => {
+                fetch("{{ url_for('bp.bot_status_endpoint') }}")
+                    .then(resp => resp.json())
+                    .then(status => {
+                        msgDiv.innerText = status.message;
+
+                        if (status.status === "finished" || status.status === "error") {
+                            btn.disabled = false;
+                            clearInterval(interval);
+                        }
+                    });
+            }, 1000);
+        })
+        .catch(err => {
+            msgDiv.innerText = "Error starting bot.";
+            btn.disabled = false;
+            console.error(err);
+        });
+});
+</script>
 </div>
 </body>
 </html>

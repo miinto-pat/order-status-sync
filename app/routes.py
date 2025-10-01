@@ -1,8 +1,9 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+import threading
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, login_user, logout_user, current_user, UserMixin
 from main import main
 
-bp = Blueprint('bp', __name__)
+bp = Blueprint('bp', __name__)  # ONLY once!
 
 # Minimal user store
 USERS = {"admin": "password123"}
@@ -11,8 +12,26 @@ class User(UserMixin):
     def __init__(self, id):
         self.id = id
 
-# Flask-Login setup happens in app/__init__.py or main Flask file
+# Global bot status
+bot_status = {"running": False, "message": "Idle", "status": "idle"}
 
+def run_bot_thread():
+    global bot_status
+    bot_status["running"] = True
+    bot_status["message"] = "Bot started..."
+    bot_status["status"] = "started"
+    try:
+        bot = main()
+        bot.main()
+        bot_status["message"] = "Bot finished successfully!"
+        bot_status["status"] = "finished"
+    except Exception as e:
+        bot_status["message"] = f"Error: {e}"
+        bot_status["status"] = "error"
+    finally:
+        bot_status["running"] = False
+
+# Routes
 @bp.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -39,10 +58,15 @@ def dashboard():
 @bp.route("/run-bot", methods=["POST"])
 @login_required
 def run_bot():
-    try:
-        bot = main()
-        bot.main()
-        flash("Bot executed successfully!")
-    except Exception as e:
-        flash(f"Error: {e}")
-    return redirect(url_for("bp.dashboard"))
+    global bot_status
+    if not bot_status["running"]:
+        thread = threading.Thread(target=run_bot_thread)
+        thread.start()
+        return jsonify({"message": "Bot started...", "status": "started"})
+    else:
+        return jsonify({"message": "Bot is already running", "status": "running"})
+
+@bp.route("/bot-status")
+@login_required
+def bot_status_endpoint():
+    return jsonify(bot_status)
