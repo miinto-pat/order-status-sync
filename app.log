@@ -1,0 +1,206 @@
+2025-09-25 19:44:47 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 19:44:48 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/actions?ActionDateStart=2025-09-18T18%3A44%3A47Z&ActionDateEnd=2025-09-25T18%3A44%3A47Z&ActionStatus=APPROVED%2CPENDING%2CTRACKING&PageSize=1000&PageNumber=1 HTTP/1.1" 404 None
+2025-09-25 19:45:55 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 19:45:55 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/actions?ActionDateStart=2025-09-18T18%3A45%3A55Z&ActionDateEnd=2025-09-25T18%3A45%3A55Z&ActionStatus=APPROVED%2CPENDING%2CTRACKING&PageSize=1000&PageNumber=1&CampaignId=30761 HTTP/1.1" 404 None
+2025-09-25 19:47:16 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 19:47:16 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/actions?ActionDateStart=2025-09-18T18%3A47%3A16Z&ActionDateEnd=2025-09-25T18%3A47%3A16Z&ActionStatus=APPROVED%2CPENDING%2CTRACKING&PageSize=1000&PageNumber=1&CampaignId=30761 HTTP/1.1" 404 None
+2025-09-25 19:48:18 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 19:48:19 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/Actions?ActionDateStart=2025-09-18T18%3A48%3A18Z&ActionDateEnd=2025-09-25T18%3A48%3A18Z&ActionStatus=APPROVED%2CPENDING%2CTRACKING&PageSize=1000&PageNumber=1&CampaignId=30761 HTTP/1.1" 200 None
+2025-09-25 19:50:04 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 19:50:05 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/Actions?ActionDateStart=2025-09-18T18%3A50%3A04Z&ActionDateEnd=2025-09-25T18%3A50%3A04Z&ActionStatus=APPROVED%2CPENDING%2CTRACKING&PageSize=1000&PageNumber=1&CampaignId=30761 HTTP/1.1" 200 None
+2025-09-25 19:55:00 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 19:55:01 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/Actions?ActionDateStart=2025-09-18T18%3A55%3A00Z&ActionDateEnd=2025-09-25T18%3A55%3A00Z&ActionStatus=APPROVED%2CPENDING%2CTRACKING&PageSize=1000&PageNumber=1&CampaignId=30761 HTTP/1.1" 200 None
+2025-09-25 19:55:01 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 19:55:02 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/Actions?ActionDateStart=2025-09-18T18%3A55%3A01Z&ActionDateEnd=2025-09-25T18%3A55%3A01Z&ActionStatus=APPROVED%2CPENDING%2CTRACKING&PageSize=1000&PageNumber=1&CampaignId=30762 HTTP/1.1" 401 None
+2025-09-25 19:55:02 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 19:55:02 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/Actions?ActionDateStart=2025-09-18T18%3A55%3A02Z&ActionDateEnd=2025-09-25T18%3A55%3A02Z&ActionStatus=APPROVED%2CPENDING%2CTRACKING&PageSize=1000&PageNumber=1&CampaignId=30763 HTTP/1.1" 401 None
+2025-09-25 20:05:12 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 20:05:13 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/Actions?ActionDateStart=2025-09-18T19%3A05%3A12Z&ActionDateEnd=2025-09-25T19%3A05%3A12Z&ActionStatus=APPROVED%2CPENDING%2CTRACKING&PageSize=1000&PageNumber=1&CampaignId=30761 HTTP/1.1" 200 None
+2025-09-25 20:05:19 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 20:05:19 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/Actions?ActionDateStart=2025-09-18T19%3A05%3A19Z&ActionDateEnd=2025-09-25T19%3A05%3A19Z&ActionStatus=APPROVED%2CPENDING%2CTRACKING&PageSize=1000&PageNumber=1&CampaignId=30761 HTTP/1.1" 200 None
+2025-09-25 20:06:08 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 20:06:09 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/Actions?ActionDateStart=2025-09-18T19%3A06%3A08Z&ActionDateEnd=2025-09-25T19%3A06%3A08Z&ActionStatus=APPROVED%2CPENDING%2CTRACKING&PageSize=1000&PageNumber=1&CampaignId=30761 HTTP/1.1" 200 None
+2025-09-25 20:06:09 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 20:06:10 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/Actions?ActionDateStart=2025-09-18T19%3A06%3A08Z&ActionDateEnd=2025-09-25T19%3A06%3A08Z&ActionStatus=APPROVED%2CPENDING%2CTRACKING&PageSize=1000&PageNumber=1&CampaignId=30761 HTTP/1.1" 200 None
+2025-09-25 20:06:10 - INFO - __main__ - Campaign 30761: Retrieved 68 actions (page 1).
+2025-09-25 20:06:10 - INFO - __main__ - Total actions retrieved for campaign 30761: 68
+2025-09-25 20:17:53 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 20:17:54 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/Actions?ActionDateStart=2025-09-18T19%3A17%3A53Z&ActionDateEnd=2025-09-25T19%3A17%3A53Z&ActionStatus=APPROVED%2CPENDING%2CTRACKING&PageSize=1000&PageNumber=1&CampaignId=30761 HTTP/1.1" 200 None
+2025-09-25 20:17:54 - INFO - __main__ - Campaign 30761: Retrieved 68 actions (page 1).
+2025-09-25 20:17:54 - INFO - __main__ - Total actions retrieved for campaign 30761: 68
+2025-09-25 20:18:19 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 20:18:20 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/Actions?ActionDateStart=2025-09-18T19%3A18%3A19Z&ActionDateEnd=2025-09-25T19%3A18%3A19Z&ActionStatus=APPROVED%2CPENDING%2CTRACKING&PageSize=1000&PageNumber=1&CampaignId=30761 HTTP/1.1" 200 None
+2025-09-25 20:18:20 - INFO - __main__ - Campaign 30761: Retrieved 68 actions (page 1).
+2025-09-25 20:18:20 - INFO - __main__ - Total actions retrieved for campaign 30761: 68
+2025-09-25 20:18:39 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 20:18:39 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/Actions?ActionDateStart=2025-09-18T19%3A18%3A39Z&ActionDateEnd=2025-09-25T19%3A18%3A39Z&ActionStatus=APPROVED%2CPENDING%2CTRACKING&PageSize=1000&PageNumber=1&CampaignId=30761 HTTP/1.1" 200 None
+2025-09-25 20:18:39 - INFO - __main__ - Campaign 30761: Retrieved 68 actions (page 1).
+2025-09-25 20:18:39 - INFO - __main__ - Total actions retrieved for campaign 30761: 68
+2025-09-25 20:20:12 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 20:20:13 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/Actions?ActionDateStart=2025-09-18T19%3A20%3A12Z&ActionDateEnd=2025-09-25T19%3A20%3A12Z&ActionStatus=APPROVED%2CPENDING%2CTRACKING&PageSize=1000&PageNumber=1&CampaignId=30761 HTTP/1.1" 200 None
+2025-09-25 20:20:13 - INFO - __main__ - Campaign 30761: Retrieved 68 actions (page 1).
+2025-09-25 20:20:13 - INFO - __main__ - Total actions retrieved for campaign 30761: 68
+2025-09-25 20:43:32 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 20:43:33 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/Actions?ActionDateStart=2025-09-18T19%3A43%3A32Z&ActionDateEnd=2025-09-25T19%3A43%3A32Z&ActionStatus=APPROVED%2CPENDING%2CTRACKING&PageSize=1000&PageNumber=1&CampaignId=30761 HTTP/1.1" 200 None
+2025-09-25 20:43:33 - INFO - __main__ - Campaign 30761: Retrieved 68 actions (page 1).
+2025-09-25 20:43:33 - INFO - __main__ - Total actions retrieved for campaign 30761: 68
+2025-09-25 20:43:57 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 20:43:58 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/Actions?ActionDateStart=2025-09-18T19%3A43%3A57Z&ActionDateEnd=2025-09-25T19%3A43%3A57Z&ActionStatus=APPROVED%2CPENDING%2CTRACKING&PageSize=1000&PageNumber=1&CampaignId=30761 HTTP/1.1" 200 None
+2025-09-25 20:43:58 - INFO - __main__ - Campaign 30761: Retrieved 68 actions (page 1).
+2025-09-25 20:44:12 - INFO - __main__ - Total actions retrieved for campaign 30761: 68
+2025-09-25 20:44:29 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 20:44:30 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/Actions?ActionDateStart=2025-09-18T19%3A44%3A29Z&ActionDateEnd=2025-09-25T19%3A44%3A29Z&ActionStatus=APPROVED%2CPENDING%2CTRACKING&PageSize=1000&PageNumber=1&CampaignId=30761 HTTP/1.1" 200 None
+2025-09-25 20:44:30 - INFO - __main__ - Campaign 30761: Retrieved 68 actions (page 1).
+2025-09-25 20:44:30 - INFO - __main__ - Total actions retrieved for campaign 30761: 68
+2025-09-25 20:44:30 - INFO - __main__ - Retrieving action 30761.6470.868941
+2025-09-25 20:48:21 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 20:48:22 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/Actions?ActionDateStart=2025-09-18T19%3A48%3A21Z&ActionDateEnd=2025-09-25T19%3A48%3A21Z&ActionStatus=APPROVED%2CPENDING%2CTRACKING&PageSize=1000&PageNumber=1&CampaignId=30761 HTTP/1.1" 200 None
+2025-09-25 20:48:22 - INFO - __main__ - Campaign 30761: Retrieved 68 actions (page 1).
+2025-09-25 20:48:22 - INFO - __main__ - Total actions retrieved for campaign 30761: 68
+2025-09-25 20:48:22 - INFO - __main__ - Retrieving action 30761.6470.868941
+2025-09-25 20:48:22 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 20:48:23 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers//Actions/30761.6470.868941 HTTP/1.1" 404 None
+2025-09-25 20:48:23 - ERROR - __main__ - Error 404: {"Status":"ERROR","Message":"No handler found for GET /Advertisers/Actions/30761.6470.868941"}
+2025-09-25 20:48:45 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 20:48:45 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/Actions?ActionDateStart=2025-09-18T19%3A48%3A45Z&ActionDateEnd=2025-09-25T19%3A48%3A45Z&ActionStatus=APPROVED%2CPENDING%2CTRACKING&PageSize=1000&PageNumber=1&CampaignId=30761 HTTP/1.1" 200 None
+2025-09-25 20:48:45 - INFO - __main__ - Campaign 30761: Retrieved 68 actions (page 1).
+2025-09-25 20:48:45 - INFO - __main__ - Total actions retrieved for campaign 30761: 68
+2025-09-25 20:48:45 - INFO - __main__ - Retrieving action 30761.6470.868941
+2025-09-25 20:48:45 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 20:48:46 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/Actions/30761.6470.868941 HTTP/1.1" 404 None
+2025-09-25 20:48:46 - ERROR - __main__ - Error 404: {"Status":"ERROR","Message":"No handler found for GET /Advertisers/Actions/30761.6470.868941"}
+2025-09-25 20:49:21 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 20:49:22 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/Actions?ActionDateStart=2025-09-18T19%3A49%3A21Z&ActionDateEnd=2025-09-25T19%3A49%3A21Z&ActionStatus=APPROVED%2CPENDING%2CTRACKING&PageSize=1000&PageNumber=1&CampaignId=30761 HTTP/1.1" 200 None
+2025-09-25 20:49:22 - INFO - __main__ - Campaign 30761: Retrieved 68 actions (page 1).
+2025-09-25 20:49:22 - INFO - __main__ - Total actions retrieved for campaign 30761: 68
+2025-09-25 20:49:22 - INFO - __main__ - Retrieving action 30761.6470.868941
+2025-09-25 20:49:22 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 20:49:22 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/Actions/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/30761.6470.868941 HTTP/1.1" 404 None
+2025-09-25 20:49:22 - ERROR - __main__ - Error 404: {"Status":"ERROR","Message":"No handler found for GET /Advertisers/Actions/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/30761.6470.868941"}
+2025-09-25 20:49:47 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 20:49:48 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/Actions?ActionDateStart=2025-09-18T19%3A49%3A47Z&ActionDateEnd=2025-09-25T19%3A49%3A47Z&ActionStatus=APPROVED%2CPENDING%2CTRACKING&PageSize=1000&PageNumber=1&CampaignId=30761 HTTP/1.1" 200 None
+2025-09-25 20:49:48 - INFO - __main__ - Campaign 30761: Retrieved 68 actions (page 1).
+2025-09-25 20:49:48 - INFO - __main__ - Total actions retrieved for campaign 30761: 68
+2025-09-25 20:49:48 - INFO - __main__ - Retrieving action 30761.6470.868941
+2025-09-25 20:49:48 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 20:49:48 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1Actions/30761.6470.868941 HTTP/1.1" 404 None
+2025-09-25 20:49:48 - ERROR - __main__ - Error 404: {"Status":"ERROR","Message":"No handler found for GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1Actions/30761.6470.868941"}
+2025-09-25 20:50:01 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 20:50:02 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/Actions?ActionDateStart=2025-09-18T19%3A50%3A01Z&ActionDateEnd=2025-09-25T19%3A50%3A01Z&ActionStatus=APPROVED%2CPENDING%2CTRACKING&PageSize=1000&PageNumber=1&CampaignId=30761 HTTP/1.1" 200 None
+2025-09-25 20:50:02 - INFO - __main__ - Campaign 30761: Retrieved 68 actions (page 1).
+2025-09-25 20:50:02 - INFO - __main__ - Total actions retrieved for campaign 30761: 68
+2025-09-25 20:50:02 - INFO - __main__ - Retrieving action 30761.6470.868941
+2025-09-25 20:50:02 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 20:50:03 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/Actions/30761.6470.868941 HTTP/1.1" 200 None
+2025-09-25 20:52:07 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 20:52:07 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/Actions?ActionDateStart=2025-09-18T19%3A52%3A07Z&ActionDateEnd=2025-09-25T19%3A52%3A07Z&ActionStatus=APPROVED%2CPENDING%2CTRACKING&PageSize=1000&PageNumber=1&CampaignId=30761 HTTP/1.1" 200 None
+2025-09-25 20:52:07 - INFO - __main__ - Campaign 30761: Retrieved 68 actions (page 1).
+2025-09-25 20:52:07 - INFO - __main__ - Total actions retrieved for campaign 30761: 68
+2025-09-25 20:52:07 - INFO - __main__ - Retrieving action 30761.6470.868941
+2025-09-25 20:52:07 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api.impact.com:443
+2025-09-25 20:52:07 - DEBUG - urllib3.connectionpool - https://api.impact.com:443 "GET /Advertisers/IRtzu8rPnHrf6008781caBg35nnY2RLGa1/Actions/30761.6470.868941 HTTP/1.1" 200 None
+2025-09-26 13:07:36 - INFO - __main__ - Retrieving order 2618989
+2025-09-26 13:07:36 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:07:37 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/DK/order/2618989 HTTP/1.1" 404 66
+2025-09-26 13:07:37 - ERROR - __main__ - Error 404: {"data":{},"meta":{"status":"failure","message":"Page not found"}}
+2025-09-26 13:10:06 - INFO - __main__ - Retrieving order 8637e025-ae91-48de-002D-00000027CE03
+2025-09-26 13:10:06 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:10:06 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/DK/order/8637e025-ae91-48de-002D-00000027CE03 HTTP/1.1" 200 83
+2025-09-26 13:14:06 - INFO - __main__ - URL  https://api-process-automation-api.miinto.net/v1/DK/order/8637e025-ae91-48de-002D-00000027CE03
+2025-09-26 13:14:06 - INFO - __main__ - Retrieving order 8637e025-ae91-48de-002D-00000027CE03
+2025-09-26 13:14:06 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:14:07 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/DK/order/8637e025-ae91-48de-002D-00000027CE03 HTTP/1.1" 200 83
+2025-09-26 13:25:04 - INFO - __main__ - URL  https://api-process-automation-api.miinto.net/v1/DK/order/8637e025-ae91-48de-002D-00000027CE03
+2025-09-26 13:25:04 - INFO - __main__ - Retrieving order 8637e025-ae91-48de-002D-00000027CE03
+2025-09-26 13:25:04 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:25:05 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/DK/order/8637e025-ae91-48de-002D-00000027CE03 HTTP/1.1" 200 83
+2025-09-26 13:26:52 - INFO - __main__ - URL  https://api-process-automation-api.miinto.net/v1/DK/order/8637e025-ae91-48de-002D-00000027CE03
+2025-09-26 13:26:52 - INFO - __main__ - Retrieving order 8637e025-ae91-48de-002D-00000027CE03
+2025-09-26 13:28:00 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:28:01 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/DK/order/8637e025-ae91-48de-002D-00000027CE03 HTTP/1.1" 200 83
+2025-09-26 13:28:07 - DEBUG - charset_normalizer - Encoding detection: ascii is most likely the one.
+2025-09-26 13:28:39 - INFO - __main__ - URL  https://api-process-automation-api.miinto.net/v1/DK/order/8637e025-ae91-48de-002D-00000027CE03
+2025-09-26 13:28:39 - INFO - __main__ - Retrieving order 8637e025-ae91-48de-002D-00000027CE03
+2025-09-26 13:28:39 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:28:39 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/DK/order/8637e025-ae91-48de-002D-00000027CE03 HTTP/1.1" 200 83
+2025-09-26 13:28:58 - INFO - __main__ - URL  https://api-process-automation-api.miinto.net/v1/DK/order/8637e025-ae91-48de-002D-00000027CE03
+2025-09-26 13:28:58 - INFO - __main__ - Retrieving order 8637e025-ae91-48de-002D-00000027CE03
+2025-09-26 13:28:58 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:28:59 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/DK/order/8637e025-ae91-48de-002D-00000027CE03 HTTP/1.1" 200 83
+2025-09-26 13:29:07 - INFO - __main__ - URL  https://api-process-automation-api.miinto.net/v1/DK/order/8637e025-ae91-48de-002D-00000027CE03
+2025-09-26 13:29:07 - INFO - __main__ - Retrieving order 8637e025-ae91-48de-002D-00000027CE03
+2025-09-26 13:29:13 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:29:13 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/DK/order/8637e025-ae91-48de-002D-00000027CE03 HTTP/1.1" 200 83
+2025-09-26 13:29:16 - DEBUG - charset_normalizer - Encoding detection: ascii is most likely the one.
+2025-09-26 13:29:33 - DEBUG - charset_normalizer - Encoding detection: ascii is most likely the one.
+2025-09-26 13:30:02 - INFO - __main__ - URL  https://api-process-automation-api.miinto.net/v1/DK/order/8637e025-ae91-48de-002D-00000027CE03
+2025-09-26 13:30:02 - INFO - __main__ - Retrieving order 8637e025-ae91-48de-002D-00000027CE03
+2025-09-26 13:30:02 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:30:03 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/DK/order/8637e025-ae91-48de-002D-00000027CE03 HTTP/1.1" 200 83
+2025-09-26 13:30:34 - INFO - __main__ - URL  https://api-process-automation-api.miinto.net/v1/DK/order/8637e025-ae91-48de-002D-00000027FC17
+2025-09-26 13:30:34 - INFO - __main__ - Retrieving order 8637e025-ae91-48de-002D-00000027FC17
+2025-09-26 13:30:34 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:30:35 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/DK/order/8637e025-ae91-48de-002D-00000027FC17 HTTP/1.1" 200 83
+2025-09-26 13:30:38 - INFO - __main__ - URL  https://api-process-automation-api.miinto.net/v1/DK/order/8637e025-ae91-48de-002D-00000027FC17
+2025-09-26 13:30:38 - INFO - __main__ - Retrieving order 8637e025-ae91-48de-002D-00000027FC17
+2025-09-26 13:30:41 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:30:42 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/DK/order/8637e025-ae91-48de-002D-00000027FC17 HTTP/1.1" 200 83
+2025-09-26 13:30:45 - DEBUG - charset_normalizer - Encoding detection: ascii is most likely the one.
+2025-09-26 13:31:51 - DEBUG - charset_normalizer - Encoding detection: ascii is most likely the one.
+2025-09-26 13:32:29 - INFO - __main__ - URL  https://api-process-automation-api.miinto.net/v1/DK/order/8637e025-ae91-48de-002D-00000027FC17
+2025-09-26 13:32:29 - INFO - __main__ - Retrieving order 8637e025-ae91-48de-002D-00000027FC17
+2025-09-26 13:32:31 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:32:32 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/DK/order/8637e025-ae91-48de-002D-00000027FC17 HTTP/1.1" 200 83
+2025-09-26 13:32:54 - INFO - __main__ - URL  https://api-process-automation-api.miinto.net/v1/DK/order/8637e025-ae91-48de-002D-00000027FC17
+2025-09-26 13:32:54 - INFO - __main__ - Retrieving order 8637e025-ae91-48de-002D-00000027FC17
+2025-09-26 13:32:56 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:32:57 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/DK/order/8637e025-ae91-48de-002D-00000027FC17 HTTP/1.1" 200 83
+2025-09-26 13:33:08 - INFO - __main__ - URL  https://api-process-automation-api.miinto.net/v1/DK/order/8637e025-ae91-48de-002D-00000027FC17
+2025-09-26 13:33:08 - INFO - __main__ - Retrieving order 8637e025-ae91-48de-002D-00000027FC17
+2025-09-26 13:33:08 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:33:08 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/DK/order/8637e025-ae91-48de-002D-00000027FC17 HTTP/1.1" 200 83
+2025-09-26 13:36:39 - INFO - __main__ - URL: https://api-process-automation-api.miinto.net/v1/DK/order/8637e025-ae91-48de-002D-00000027FC17
+2025-09-26 13:36:39 - INFO - __main__ - Retrieving order 8637e025-ae91-48de-002D-00000027FC17
+2025-09-26 13:36:42 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:36:42 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/DK/order/8637e025-ae91-48de-002D-00000027FC17 HTTP/1.1" 200 83
+2025-09-26 13:36:45 - DEBUG - charset_normalizer - Encoding detection: ascii is most likely the one.
+2025-09-26 13:40:36 - INFO - __main__ - URL: https://api-process-automation-api.miinto.net/v1/DK/order/8637e025-ae91-48de-002D-00000027FC17
+2025-09-26 13:40:36 - INFO - __main__ - Retrieving order 8637e025-ae91-48de-002D-00000027FC17
+2025-09-26 13:40:40 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:40:41 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/DK/order/8637e025-ae91-48de-002D-00000027FC17 HTTP/1.1" 200 83
+2025-09-26 13:41:01 - INFO - __main__ - URL: https://api-process-automation-api.miinto.net/v1/DK/order/8637e025-ae91-48de-002D-00000027FC17
+2025-09-26 13:41:01 - INFO - __main__ - Retrieving order 8637e025-ae91-48de-002D-00000027FC17
+2025-09-26 13:41:01 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:41:01 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/DK/order/8637e025-ae91-48de-002D-00000027FC17 HTTP/1.1" 200 83
+2025-09-26 13:41:05 - INFO - __main__ - URL: https://api-process-automation-api.miinto.net/v1/DK/order/8637e025-ae91-48de-002D-00000027FC17
+2025-09-26 13:41:05 - INFO - __main__ - Retrieving order 8637e025-ae91-48de-002D-00000027FC17
+2025-09-26 13:41:05 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:41:05 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/DK/order/8637e025-ae91-48de-002D-00000027FC17 HTTP/1.1" 200 83
+2025-09-26 13:41:31 - INFO - __main__ - URL: https://api-process-automation-api.miinto.net/v1/DK/order/8637e025-ae91-48de-002D-00000027FC17
+2025-09-26 13:41:31 - INFO - __main__ - Retrieving order 8637e025-ae91-48de-002D-00000027FC17
+2025-09-26 13:41:34 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:41:34 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/DK/order/8637e025-ae91-48de-002D-00000027FC17 HTTP/1.1" 200 83
+2025-09-26 13:43:32 - INFO - __main__ - Retrieving order 8637e025-ae91-48de-002D-00000027FC17
+2025-09-26 13:43:32 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:43:33 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/dk/order/8637e025-ae91-48de-002D-00000027FC17 HTTP/1.1" 200 1829
+2025-09-26 13:43:48 - INFO - __main__ - Retrieving order 8637e025-ae91-48de-002D-00000027FC17
+2025-09-26 13:43:48 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:43:49 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/dk/order/8637e025-ae91-48de-002D-00000027FC17 HTTP/1.1" 200 1829
+2025-09-26 13:44:49 - INFO - __main__ - Retrieving order 8637e025-ae91-48de-002D-00000027FC17
+2025-09-26 13:44:49 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:44:49 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/dk/order/8637e025-ae91-48de-002D-00000027FC17 HTTP/1.1" 200 1829
+2025-09-26 13:46:42 - INFO - __main__ - Retrieving order 8637e025-ae91-48de-002D-00000027FC17
+2025-09-26 13:46:42 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:46:43 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/dk/order/8637e025-ae91-48de-002D-00000027FC17 HTTP/1.1" 200 1829
+2025-09-26 13:47:57 - INFO - __main__ - Retrieving order 8637e025-ae91-48de-002D-00000027FC17
+2025-09-26 13:47:57 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:47:57 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/dk/order/8637e025-ae91-48de-002D-00000027FC17 HTTP/1.1" 200 1829
+2025-09-26 13:48:04 - INFO - __main__ - Retrieving order 8637e025-ae91-48de-002D-00000027F945
+2025-09-26 13:48:04 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:48:05 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/dk/order/8637e025-ae91-48de-002D-00000027F945 HTTP/1.1" 200 None
+2025-09-26 13:49:55 - INFO - __main__ - Retrieving order 8637e025-ae91-48de-002D-00000027F6A7
+2025-09-26 13:49:55 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:49:56 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/dk/order/8637e025-ae91-48de-002D-00000027F6A7 HTTP/1.1" 200 None
+2025-09-26 13:50:15 - INFO - __main__ - Retrieving order 8637e025-ae91-48de-002D-00000027F6A7
+2025-09-26 13:50:15 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): api-process-automation-api.miinto.net:443
+2025-09-26 13:50:15 - DEBUG - urllib3.connectionpool - https://api-process-automation-api.miinto.net:443 "GET /v1/dk/order/8637e025-ae91-48de-002D-00000027F6A7 HTTP/1.1" 200 None
