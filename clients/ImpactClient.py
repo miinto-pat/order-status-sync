@@ -20,14 +20,16 @@ class ImpactClient:
 
 
 
-    def get_actions(self,campaign_id):
+    def get_actions(self,campaign_id, start_date, end_date):
         url=BASE_URL+self.username+"/Actions?"
-        # end_date = datetime.datetime.now(timezone.utc)
-        # start_date = end_date - datetime.timedelta(days=7)
-        start_date = datetime.datetime(2025, 9, 1, tzinfo=datetime.timezone.utc)
-        end_date = datetime.datetime(2025, 9, 30, tzinfo=datetime.timezone.utc)
-        end_date_str=common_utils.format_date(end_date)
-        start_date_str=common_utils.format_date(start_date)
+        end_date = datetime.datetime(2025, 9, 2, tzinfo=datetime.timezone.utc)
+        start_date = end_date - datetime.timedelta(days=1)
+        end_date_str = end_date.strftime("%Y-%m-%d")
+        start_date_str = start_date.strftime("%Y-%m-%d")
+        # start_date = datetime.datetime(2025, 9, 1, tzinfo=datetime.timezone.utc)
+        # end_date = datetime.datetime(2025, 9, 30, tzinfo=datetime.timezone.utc)
+        end_date_str=common_utils.format_date(end_date_str)
+        start_date_str=common_utils.format_date(start_date_str)
         params = {
             "ActionDateStart": start_date_str,
             "ActionDateEnd": end_date_str,

@@ -12,24 +12,39 @@ class User(UserMixin):
     def __init__(self, id):
         self.id = id
 
-# Global bot status
-bot_status = {"running": False, "message": "Idle", "status": "idle"}
 
-def run_bot_thread():
+# Global bot status
+bot_status = {"running": False, "message": "Idle", "status": "idle", "market_stats": {}}
+
+
+def run_bot_thread(start_date=None, end_date=None):
     global bot_status
     bot_status["running"] = True
     bot_status["message"] = "Bot started..."
     bot_status["status"] = "started"
+    bot_status["market_stats"] = {}
+
     try:
         bot = main()
-        bot.main()
-        bot_status["message"] = "Bot finished successfully!"
+        raw_stats = bot.main(start_date=start_date, end_date=end_date)
+
+        # ✅ Ensure all stats values are integers, never None
+        safe_stats = {}
+        for market, stats in raw_stats.items():
+            safe_stats[market] = {k: (v if v is not None else 0) for k, v in stats.items()}
+
+        bot_status["market_stats"] = safe_stats
+        bot_status["message"] = f"Bot finished with range {start_date} → {end_date}"
         bot_status["status"] = "finished"
+
     except Exception as e:
         bot_status["message"] = f"Error: {e}"
         bot_status["status"] = "error"
+        bot_status["market_stats"] = {}
+
     finally:
         bot_status["running"] = False
+
 
 # Routes
 @bp.route("/login", methods=["GET", "POST"])
@@ -59,12 +74,24 @@ def dashboard():
 @login_required
 def run_bot():
     global bot_status
-    if not bot_status["running"]:
-        thread = threading.Thread(target=run_bot_thread)
-        thread.start()
-        return jsonify({"message": "Bot started...", "status": "started"})
-    else:
-        return jsonify({"message": "Bot is already running", "status": "running"})
+    try:
+        data = request.get_json()
+        start_date = data.get("start_date")
+        end_date = data.get("end_date")
+
+        if not bot_status["running"]:
+            thread = threading.Thread(target=run_bot_thread, args=(start_date, end_date))
+            thread.start()
+            return jsonify({"message": f"Bot started from {start_date} to {end_date}", "status": "started"})
+        else:
+            return jsonify({"message": "Bot is already running", "status": "running"})
+
+    except Exception as e:
+        # Return the full error message for debugging
+        import traceback
+        tb = traceback.format_exc()
+        print(tb)  # print in server console
+        return jsonify({"message": f"Error: {e}", "status": "error", "trace": tb})
 
 @bp.route("/bot-status")
 @login_required

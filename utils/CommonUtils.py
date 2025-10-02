@@ -27,5 +27,5 @@ class common_utils:
 
     @staticmethod
     def format_date(date_string):
-        formatted_dt = datetime.datetime.strftime(date_string, '%Y-%m-%dT%H:%M:%SZ')
-        return formatted_dt
+        dt = datetime.datetime.strptime(date_string, "%Y-%m-%d")
+        return dt.strftime("%Y-%m-%dT%H:%M:%SZ")

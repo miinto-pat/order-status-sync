@@ -33,11 +33,11 @@ class PATARules:
 
         # 🔹 Debug: Print orderId and positions info
         order_id = order_data.get("orderId") or order_data.get("OrderId") or "<no id>"
-        print(f"Order {order_id} has {len(positions)} positions:")
+        # print(f"Order {str(order_id)} has {len(positions)} positions:")
         for i, p in enumerate(positions, start=1):
             amount = p.get("amount", "<no amount>")
             status = p.get("status", "<no status>")
-            print(f"  Position {i}: amount={amount}, status={status}")
+            # print(f"  Position {i}: amount={amount}, status={status}")
 
         def to_int(v):
             try:
@@ -62,6 +62,7 @@ class PATARules:
 
         # 3) Fully returned
         if all(is_returned_or_rejected(p) for p in positions):
+            print("All positions returned/rejected, returning ITEM_RETURNED")
             return "ITEM_RETURNED", 0
 
         # 4) Partial return
@@ -71,7 +72,9 @@ class PATARules:
                 for p in positions if not is_returned_or_rejected(p)
             )
             action_cost = total_unrefunded // 100
+            print("Some positions returned/rejected, returning ORDER_UPDATE")
             return "ORDER_UPDATE", action_cost
 
         # 5) Fully processed (all sent, amount=1)
+        print("Order fully processed, returning None")
         return None, None

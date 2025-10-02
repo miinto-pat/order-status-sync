@@ -11,7 +11,7 @@ class PATAClient():
     def retrieve_order(self,market,order_id):
         market = market.lower()
         url=PATA_BASE_URL + market+ "/order/" + order_id
-        logger.info(f"Retrieving order {order_id}")
+        logger.info(f"Retrieving order {str(order_id)}")
         try:
             response = requests.get(
                 url,
@@ -24,7 +24,7 @@ class PATAClient():
             return response.json()
 
         except requests.RequestException as e:
-            logger.error(f"Error fetching order {order_id}: {e}")
+            logger.error(f"Error fetching order {str(order_id)}: {e}")
             return None
 
 if __name__ == '__main__':
