@@ -94,7 +94,7 @@ if (status.market_stats) {
 // When finished or error, show full table with headers
 if (status.status === "finished" || status.status === "error") {
     let html = "<table class='table table-sm table-bordered'>";
-    html += "<thead><tr><th>Market</th><th>Total</th><th>VOUCHER/FULLY_RETURNED</th><th>ITEM_RETURNED</th><th>ORDER_UPDATE</th><th>Not Modified</th></tr></thead><tbody>";
+    html += "<thead><tr><th>Market</th><th>Total</th><th>VOUCHER/Pending</th><th>ITEM_RETURNED</th><th>ORDER_UPDATE</th><th>Not Modified</th></tr></thead><tbody>";
 
     for (const [market, s] of Object.entries(status.market_stats)) {
         html += `<tr>
