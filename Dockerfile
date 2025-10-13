@@ -11,7 +11,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy source code
 COPY . .
 
-EXPOSE 8080
+EXPOSE 3000
 
 # Run main.py
 CMD ["python", "run.py"]
