@@ -1,7 +1,7 @@
 import threading
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, login_user, logout_user, current_user, UserMixin
-from main import main
+from main import main, logger
 
 bp = Blueprint('bp', __name__)  # ONLY once!
 
@@ -37,10 +37,24 @@ def run_bot_thread(start_date=None, end_date=None):
         bot_status["message"] = f"Bot finished with range {start_date} → {end_date}"
         bot_status["status"] = "finished"
 
+
     except Exception as e:
-        bot_status["message"] = f"Error: {e}"
+        # Keep developer-friendly logs in console
+        logger.exception("Bot failed during execution")
+
+        # Set user-friendly message in UI
+        user_message = str(e)
+        if "400" in user_message or "invalid value" in user_message:
+            user_message = "Error while retrieving actions — invalid campaign ID configuration."
+        elif "timeout" in user_message.lower():
+            user_message = "Error while retrieving actions — request timed out."
+        elif "unauthorized" in user_message.lower():
+            user_message = "Error while retrieving actions — invalid credentials."
+
+        bot_status["message"] = user_message
         bot_status["status"] = "error"
         bot_status["market_stats"] = {}
+
 
     finally:
         bot_status["running"] = False

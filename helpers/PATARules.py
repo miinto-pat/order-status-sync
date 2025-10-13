@@ -39,6 +39,8 @@ class PATARules:
             status = p.get("status", "<no status>")
             # print(f"  Position {i}: amount={amount}, status={status}")
 
+
+
         def to_int(v):
             try:
                 return int(v)
@@ -48,16 +50,21 @@ class PATARules:
         def status_of(p):
             return (p.get("status") or "").strip().lower()
 
+
         def is_pending(p):
             return to_int(p.get("amount", 0)) >= 1 and status_of(p) == "pending"
+
 
         def is_returned_or_rejected(p):
             amt = to_int(p.get("amount", 0))
             st = status_of(p)
+            # Pending in multi-position order treated as returned/rejected
+            if is_pending(p) and len(positions) > 1:
+                return True
             return (st == "rejected" and amt == 1) or (amt == 0 and st in ("accepted", "sent"))
 
         # 2) Pending positions -> OTHER
-        if any(is_pending(p) for p in positions):
+        if len(positions) == 1 and status_of(positions[0]) == "pending" and to_int(positions[0].get("amount", 0)) >= 1:
             return "OTHER", 0
 
         # 3) Fully returned
@@ -72,7 +79,6 @@ class PATARules:
                 for p in positions if not is_returned_or_rejected(p)
             )
             action_cost = total_unrefunded // 100
-            print("Some positions returned/rejected, returning ORDER_UPDATE")
             return "ORDER_UPDATE", action_cost
 
         # 5) Fully processed (all sent, amount=1)

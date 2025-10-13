@@ -1,5 +1,7 @@
 import os
 
+from flask import jsonify
+
 from clients.ImpactClient import ImpactClient
 from clients.PATAclient import PATAClient
 from constants.Constants import COUNTRY_CODES_AND_CAMPAIGNS
@@ -25,7 +27,12 @@ class main:
             impact_client = ImpactClient(CONFIG_FILE_PATH, market)
             pata_client = PATAClient()
 
-            actions = impact_client.get_actions(campaign_id, start_date, end_date)
+            try:
+                actions = impact_client.get_actions(campaign_id, start_date, end_date)
+            except Exception as e:
+                logger.error(f"Failed to get actions for campaign {campaign_id}: {e}")
+                # Return None or skip this market
+                raise
             # logger.info(f"Total actions retrieved for market {market}: {len(actions)}")
 
             # ✅ Initialize stats
@@ -35,16 +42,32 @@ class main:
                 "ITEM_RETURNED": 0,
                 "ORDER_UPDATE": 0,
                 "Not_Modified": 0,
+                "Not_Processed":0,
                 "NONE":0
             }
 
 
             for action in actions:
                 order_id_impact = int(action.get("Oid"))
+                action_id = action.get("Id")
                 order_uuid_str = OrderMiiUUID(market, order_id_impact).to_uuid_string()
                 order = pata_client.retrieve_order(market, order_uuid_str)
+                if not order:
+                    logger.warning(
+                        f"Order not processed: market={market}, "
+                        f"impact_order_id={order_id_impact}, "
+                        f"uuid={order_uuid_str}, action_id={action_id}"
+                    )
+                    stats['Not_Processed'] += 1
+                    continue
 
                 reason, amount = PATARules.calculate_action_reason_and_amount(order)
+                if reason in stats and reason=="OTHER" or reason == "ITEM_RETURNED":
+                    impact_client.reverse_action(action_id, amount, reason)
+                elif  reason in stats and reason == "ORDER_UPDATE":
+                    impact_client.update_action(action_id,amount, reason)
+
+
 
                 if reason in stats:
                     stats[reason] += 1
@@ -54,7 +77,7 @@ class main:
 
             # Calculate fully processed actions
             stats["Not_Modified"] = stats["total_actions"] - (
-                        stats["OTHER"] + stats["ITEM_RETURNED"] + stats["ORDER_UPDATE"])
+                        stats["Not_Processed"] + stats["OTHER"] + stats["ITEM_RETURNED"] + stats["ORDER_UPDATE"])
 
             all_stats[market] = stats
 
@@ -68,6 +91,18 @@ class main:
             # logger.info(f"  NONE: {stats['NONE']}")
         return all_stats
 
+    def run_main(self):
+        try:
+            result = self.main()
+            if not result:
+                # Friendly message for UI
+                return jsonify({"message": "Error while retrieving actions"}), 500
+            return jsonify({"message": "Bot finished successfully", "stats": result})
+        except Exception as e:
+            # Log internal details
+            logger.exception("Error running bot")
+            # Friendly message for UI
+            return jsonify({"message": "Error while retrieving actions"}), 500
 
 if __name__ == "__main__":
-    main().main()
+    main().run_main()

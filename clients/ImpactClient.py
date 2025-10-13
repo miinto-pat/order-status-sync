@@ -20,23 +20,23 @@ class ImpactClient:
 
 
 
-    def get_actions(self,campaign_id, start_date, end_date):
+    def get_actions(self,campaign_id, start_date, end_date, page_size=1000, page_number=1):
         url=BASE_URL+self.username+"/Actions?"
-        end_date = datetime.datetime(2025, 9, 2, tzinfo=datetime.timezone.utc)
-        start_date = end_date - datetime.timedelta(days=1)
+        if isinstance(end_date, str):
+            end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d")
+        if isinstance(start_date, str):
+            start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d")
         end_date_str = end_date.strftime("%Y-%m-%d")
         start_date_str = start_date.strftime("%Y-%m-%d")
-        # start_date = datetime.datetime(2025, 9, 1, tzinfo=datetime.timezone.utc)
-        # end_date = datetime.datetime(2025, 9, 30, tzinfo=datetime.timezone.utc)
         end_date_str=common_utils.format_date(end_date_str)
         start_date_str=common_utils.format_date(start_date_str)
         params = {
             "ActionDateStart": start_date_str,
             "ActionDateEnd": end_date_str,
             "ActionStatus": "APPROVED,PENDING,TRACKING",
-            "PageSize":1000,
-            "PageNumber":1,
-            "CampaignId":campaign_id
+            "PageSize":page_size,
+            "PageNumber":page_number,
+            # "CampaignId":campaign_id
         }
 
         all_actions = []
@@ -50,7 +50,8 @@ class ImpactClient:
                 )
                 if response.status_code != 200:
                     logger.error(f"Error {response.status_code}: {response.text}")
-                    break
+                    raise ValueError(f"Error {response.status_code}: {response.text}")
+
 
                 data = response.json()
                 actions = data.get("Actions", [])
@@ -68,8 +69,8 @@ class ImpactClient:
                 params["PageNumber"] += 1
 
             except requests.RequestException as e:
-                logger.error(f"Error fetching actions: {e}")
-                break
+                raise ValueError(f"Error fetching actions: {e}")
+
 
         return all_actions
 
@@ -85,6 +86,10 @@ class ImpactClient:
             )
             if response.status_code != 200:
                 logger.error(f"Error {response.status_code}: {response.text}")
+                logger.error(
+                    f"Failed to retrieve action {action_id} "
+                    f"(status {response.status_code}). Response: {response.text}"
+                )
                 return None
 
             return response.json()
@@ -120,7 +125,7 @@ class ImpactClient:
             return None
 
     def reverse_action(self, action_id, amount, reason):
-        url = BASE_URL + self.username + "/Actions/" + action_id
+        url = BASE_URL + self.username + "/Actions"
         logger.info(f"Retrieving action {action_id}")
         body = {
             "ActionId": action_id,
