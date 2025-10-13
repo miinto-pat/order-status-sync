@@ -13,15 +13,6 @@ from helpers.PATARules import PATARules
 logger = get_logger(__name__)
 
 class main:
-    import os
-    import json
-    from utils import common_utils  # adjust this import path if needed
-    from clients import ImpactClient, PATAClient  # adjust import if needed
-    from utils.order import OrderMiiUUID
-    from utils.rules import PATARules
-    from utils.logger import logger  # adjust logger import if needed
-    from constants import COUNTRY_CODES_AND_CAMPAIGNS  # assuming you defined it
-
     def main(self, start_date=None, end_date=None):
         BASE_DIR = os.path.dirname(os.path.abspath(__file__))
         CONFIG_FILE_PATH = os.path.join(BASE_DIR, "config.json")
