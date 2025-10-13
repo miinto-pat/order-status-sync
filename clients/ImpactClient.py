@@ -11,8 +11,11 @@ from utils.CommonUtils import common_utils
 logger = get_logger(__name__)
 
 class ImpactClient:
-    def __init__(self,config_file, market):
-        self.config = common_utils.read_json(config_file)
+    def __init__(self,data, market):
+        if isinstance(data, str):  # path to config file
+            self.config = common_utils.read_json(data)
+        else:  # already a dictionary
+            self.config = data
         account_SID = f"account_SID_{market}"
         token = f"token_{market}"
         self.username = self.config.get(account_SID)

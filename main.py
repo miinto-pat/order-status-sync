@@ -45,7 +45,7 @@ class main:
             market = COUNTRY_CODES_AND_CAMPAIGNS.get(campaign_id)
 
             # ✅ Pass the *loaded data* directly instead of path
-            impact_client = ImpactClient(config=data, market=market)
+            impact_client = ImpactClient(data, market=market)
             pata_client = PATAClient()
 
             try:
