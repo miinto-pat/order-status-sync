@@ -1,3 +1,4 @@
+import json
 import os
 
 from flask import jsonify
@@ -18,6 +19,21 @@ class main:
         CONFIG_FILE_PATH = os.path.join(BASE_DIR, "config.json")
         data = common_utils.read_json(CONFIG_FILE_PATH)
         campaign_ids = data.get("campaign_ids", [])
+        if os.path.exists(CONFIG_FILE_PATH):
+            data = common_utils.read_json(CONFIG_FILE_PATH)
+            campaign_ids = data.get("campaign_ids", [])
+        else:
+            env_json = os.getenv("impact_secret_json", "")
+            if env_json:
+                try:
+                    data = json.loads(env_json)
+                    campaign_ids = data.get("campaign_ids", [])
+                    print("Loaded campaign IDs from environment variable (impact_secret_json)")
+                except json.JSONDecodeError as e:
+                    print("Failed to decode JSON from impact_secret_json environment variable:", e)
+            else:
+                print("No config.json found and impact_secret_json environment variable is not set.")
+
         print("Campaign IDs:", campaign_ids)
 
         all_stats = {}

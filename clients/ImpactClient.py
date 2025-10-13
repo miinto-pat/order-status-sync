@@ -36,7 +36,7 @@ class ImpactClient:
             "ActionStatus": "APPROVED,PENDING,TRACKING",
             "PageSize":page_size,
             "PageNumber":page_number,
-            # "CampaignId":campaign_id
+            "CampaignId":campaign_id
         }
 
         all_actions = []
