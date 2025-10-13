@@ -17,8 +17,6 @@ class main:
     def main(self,start_date=None, end_date=None):
         BASE_DIR = os.path.dirname(os.path.abspath(__file__))
         CONFIG_FILE_PATH = os.path.join(BASE_DIR, "config.json")
-        data = common_utils.read_json(CONFIG_FILE_PATH)
-        campaign_ids = data.get("campaign_ids", [])
         if os.path.exists(CONFIG_FILE_PATH):
             data = common_utils.read_json(CONFIG_FILE_PATH)
             campaign_ids = data.get("campaign_ids", [])
