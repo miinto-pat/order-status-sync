@@ -14,16 +14,23 @@ class ImpactClient:
     def __init__(self,data, market):
         if isinstance(data, str):  # path to config file
             self.config = common_utils.read_json(data)
+            print(data)
+            print(self.config)
         else:  # already a dictionary
             self.config = data
         account_SID = f"account_SID_{market}"
+        print(f"SID: {account_SID}")
         token = f"token_{market}"
+        print(f"token: {token}")
+
         self.username = self.config.get(account_SID)
         self.password = self.config.get(token)
 
 
 
     def get_actions(self,campaign_id, start_date, end_date, page_size=1000, page_number=1):
+        print(self.username)
+        print(BASE_URL)
         url=BASE_URL+self.username+"/Actions?"
         if isinstance(end_date, str):
             end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d")
@@ -133,7 +140,7 @@ class ImpactClient:
         body = {
             "ActionId": action_id,
             "Amount": amount,
-            "Reason": reason
+            # "Reason": reason
 
         }
         try:

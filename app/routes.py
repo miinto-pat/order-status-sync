@@ -1,7 +1,12 @@
+import json
+import os
 import threading
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, login_user, logout_user, current_user, UserMixin
+
+from constants.Constants import COUNTRY_CODES_AND_CAMPAIGNS
 from main import main, logger
+from utils.CommonUtils import common_utils
 
 bp = Blueprint('bp', __name__)  # ONLY once!
 
@@ -17,46 +22,97 @@ class User(UserMixin):
 bot_status = {"running": False, "message": "Idle", "status": "idle", "market_stats": {}}
 
 
-def run_bot_thread(start_date=None, end_date=None):
+def run_bot_thread(start_date=None, end_date=None, markets=None):
     global bot_status
-    bot_status["running"] = True
-    bot_status["message"] = "Bot started..."
-    bot_status["status"] = "started"
-    bot_status["market_stats"] = {}
+
+    bot_status.update({
+        "running": True,
+        "message": "Bot started...",
+        "status": "started",
+        "market_stats": {},
+        "not_processed": [],
+    })
 
     try:
         bot = main()
-        raw_stats = bot.main(start_date=start_date, end_date=end_date)
+        data = common_utils.load_config()
+        all_campaign_ids = data.get("campaign_ids", [])
+        not_processed_all = []
 
-        # ✅ Ensure all stats values are integers, never None
-        safe_stats = {}
-        for market, stats in raw_stats.items():
-            safe_stats[market] = {k: (v if v is not None else 0) for k, v in stats.items()}
+        if markets:
+            selected_ids = [int(m) for m in markets]
+            campaign_ids = [cid for cid in all_campaign_ids if cid in selected_ids]
+        else:
+            campaign_ids = all_campaign_ids  # Fallback to all
 
-        bot_status["market_stats"] = safe_stats
-        bot_status["message"] = f"Bot finished with range {start_date} → {end_date}"
+        for campaign_id in campaign_ids:
+            market = COUNTRY_CODES_AND_CAMPAIGNS.get(campaign_id, f"Unknown-{campaign_id}")
+            bot_status["message"] = f"Processing market: {market}..."
+
+            try:
+                # ✅ Process one market
+                result = bot.process_single_market(campaign_id, market, start_date, end_date)
+                stats = result["stats"]
+                not_processed = result["not_processed"]
+
+                # ✅ Save results
+                bot_status["market_stats"][market] = {
+                    k: (v if v is not None else 0) for k, v in stats.items()
+                }
+                not_processed_all.extend(not_processed)
+                bot_status["not_processed"] = not_processed_all
+                bot_status["message"] = f"✅ Finished market: {market}"
+
+            except Exception as e:
+                # ⚠️ Handle market-level error but continue
+                logger.exception(f"Error while processing market {market}: {e}")
+
+                bot_status["market_stats"][market] = {
+                    "total_actions": 0,
+                    "OTHER": 0,
+                    "ITEM_RETURNED": 0,
+                    "ORDER_UPDATE": 0,
+                    "Not_Modified": 0,
+                    "Not_Processed": 0,
+                    "error": str(e),
+                }
+
+                not_processed_all.append({
+                    "market": market,
+                    "action_id": "N/A",
+                    "error": str(e),
+                })
+                bot_status["not_processed"] = not_processed_all
+                bot_status["message"] = f"⚠️ Failed market: {market}, continuing..."
+                continue
+
+        # ✅ If all markets processed (even if some failed)
         bot_status["status"] = "finished"
-
+        bot_status["message"] = f"✅ Bot finished. {len(campaign_ids)} market(s) processed."
 
     except Exception as e:
-        # Keep developer-friendly logs in console
-        logger.exception("Bot failed during execution")
-
-        # Set user-friendly message in UI
-        user_message = str(e)
-        if "400" in user_message or "invalid value" in user_message:
-            user_message = "Error while retrieving actions — invalid campaign ID configuration."
-        elif "timeout" in user_message.lower():
-            user_message = "Error while retrieving actions — request timed out."
-        elif "unauthorized" in user_message.lower():
-            user_message = "Error while retrieving actions — invalid credentials."
-
-        bot_status["message"] = user_message
-        bot_status["status"] = "error"
-        bot_status["market_stats"] = {}
-
+        # ❌ Global setup error
+        logger.exception("Bot failed during setup or initialization")
+        msg = str(e)
+        if "400" in msg or "invalid value" in msg:
+            msg = "Error while retrieving actions — invalid campaign ID configuration."
+        elif "timeout" in msg.lower():
+            msg = "Error while retrieving actions — request timed out."
+        elif "unauthorized" in msg.lower():
+            msg = "Error while retrieving actions — invalid credentials."
+        bot_status.update({
+            "message": msg,
+            "status": "error",
+            "market_stats": {},
+            "not_processed": [],
+        })
 
     finally:
+        # ✅ Always run this even on crash
+        if bot_status["status"] not in ("finished", "error"):
+            bot_status["status"] = "error"
+            bot_status["message"] = "Bot stopped unexpectedly. Partial results available."
+
         bot_status["running"] = False
 
 
@@ -82,7 +138,7 @@ def logout():
 @bp.route("/")
 @login_required
 def dashboard():
-    return render_template("dashboard.html")
+    return render_template("dashboard.html",markets=COUNTRY_CODES_AND_CAMPAIGNS)
 
 @bp.route("/run-bot", methods=["POST"])
 @login_required
@@ -92,11 +148,15 @@ def run_bot():
         data = request.get_json()
         start_date = data.get("start_date")
         end_date = data.get("end_date")
+        markets = data.get("markets", [])
+
+        if not markets:
+            return jsonify({"status": "error", "message": "No markets selected"}), 400
 
         if not bot_status["running"]:
-            thread = threading.Thread(target=run_bot_thread, args=(start_date, end_date))
+            thread = threading.Thread(target=run_bot_thread, args=(start_date, end_date,markets))
             thread.start()
-            return jsonify({"message": f"Bot started from {start_date} to {end_date}", "status": "started"})
+            return jsonify({"message": f"Running bot for markets: {markets} from {start_date} to {end_date}", "status": "started"})
         else:
             return jsonify({"message": "Bot is already running", "status": "running"})
 
