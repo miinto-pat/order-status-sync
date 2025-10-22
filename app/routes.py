@@ -11,7 +11,7 @@ from utils.CommonUtils import common_utils
 bp = Blueprint('bp', __name__)  # ONLY once!
 
 # Minimal user store
-USERS = {"admin": "password123"}
+USERS = {"AV-Miinto": ".)k&J9&4Rf0A"}
 
 class User(UserMixin):
     def __init__(self, id):
