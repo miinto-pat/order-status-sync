@@ -140,7 +140,7 @@ class ImpactClient:
         body = {
             "ActionId": action_id,
             "Amount": amount,
-            # "Reason": reason
+            "Reason": reason
 
         }
         try:

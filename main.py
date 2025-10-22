@@ -1,11 +1,5 @@
-import json
-import os
-
-from flask import jsonify
-
 from clients.ImpactClient import ImpactClient
 from clients.PATAclient import PATAClient
-from constants.Constants import COUNTRY_CODES_AND_CAMPAIGNS
 from helpers.logger import get_logger
 from utils.CommonUtils import common_utils
 from utils.OrderMiiUUID import OrderMiiUUID
@@ -77,10 +71,6 @@ class main:
 
 
                 order_uuid_str = OrderMiiUUID(market, order_id_impact).to_uuid_string()
-                # if idx == 0:  # corrupt only first one
-                #     order_uuid_str = "INVALID_TEST_ID"
-                # if idx == 1:  # corrupt only first one
-                #     order_uuid_str = "INVALID_TEST_ID_2"
                 order = pata_client.retrieve_order(market, order_uuid_str)
                 print(f"\nOrder details for {order_uuid_str} ({market}):")
                 for key, value in order.items():
@@ -92,17 +82,19 @@ class main:
                     continue
 
                 reason, amount = PATARules.calculate_action_reason_and_amount(order)
+                amount_without_vat = common_utils.exclude_VAT(amount,market)
+
 
 
                 if reason in ("OTHER", "ITEM_RETURNED"):
-                    result = impact_client.reverse_action(action_id, amount, reason)
+                    result = impact_client.reverse_action(action_id, amount_without_vat, reason)
                     if result is None:
                         stats["Not_Processed"] += 1
                         not_processed_ids.append({"market": market, "action_id": action_id})
                         continue
 
                 elif reason == "ORDER_UPDATE":
-                    result=impact_client.update_action(action_id, amount, reason)
+                    result=impact_client.update_action(action_id, amount_without_vat, reason)
                     if result is None:
                         stats["Not_Processed"] += 1
                         not_processed_ids.append({"market": market, "action_id": action_id})

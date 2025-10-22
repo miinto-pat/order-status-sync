@@ -11,7 +11,7 @@ from utils.CommonUtils import common_utils
 bp = Blueprint('bp', __name__)  # ONLY once!
 
 # Minimal user store
-USERS = {"admin": "password123"}
+USERS = {"AV-Miinto": " .)k&J9&4Rf0A"}
 
 class User(UserMixin):
     def __init__(self, id):
@@ -37,10 +37,13 @@ def run_bot_thread(start_date=None, end_date=None, markets=None):
         bot = main()
         data = common_utils.load_config()
         all_campaign_ids = data.get("campaign_ids", [])
+        print(f"all campaign_ids: {all_campaign_ids}")
         not_processed_all = []
 
         if markets:
             selected_ids = [int(m) for m in markets]
+            print(f"selected campaign_ids: {selected_ids}")
+
             campaign_ids = [cid for cid in all_campaign_ids if cid in selected_ids]
         else:
             campaign_ids = all_campaign_ids  # Fallback to all
