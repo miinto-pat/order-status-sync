@@ -11,8 +11,19 @@ from google.cloud import secretmanager
 
 bp = Blueprint('bp', __name__)
 
-# Minimal user store
-# USERS = {"AV-Miinto": ".)k&J9&4Rf0A"}
+
+def load_config_from_secret():
+    client = secretmanager.SecretManagerServiceClient()
+    secret_path = "projects/373688639022/secrets/impact_secret_json/versions/latest"
+    response = client.access_secret_version(request={"name": secret_path})
+    secret_str = response.payload.data.decode("UTF-8")
+    return json.loads(secret_str)
+
+
+# ✅ Load once at import time
+CONFIG = load_config_from_secret()
+USERS = CONFIG.get("USERS", {})
+
 
 class User(UserMixin):
 
@@ -133,6 +144,7 @@ def login():
         flash("Invalid credentials")
     return render_template("login.html")
 
+
 def load_config_from_secret(secret_name: str):
     client = secretmanager.SecretManagerServiceClient()
     project_id = "373688639022"
@@ -141,16 +153,19 @@ def load_config_from_secret(secret_name: str):
     secret_str = response.payload.data.decode("UTF-8")
     return json.loads(secret_str)
 
+
 @bp.route("/logout")
 @login_required
 def logout():
     logout_user()
     return redirect(url_for("bp.login"))
 
+
 @bp.route("/")
 @login_required
 def dashboard():
-    return render_template("dashboard.html",markets=COUNTRY_CODES_AND_CAMPAIGNS)
+    return render_template("dashboard.html", markets=COUNTRY_CODES_AND_CAMPAIGNS)
+
 
 @bp.route("/run-bot", methods=["POST"])
 @login_required
@@ -166,9 +181,10 @@ def run_bot():
             return jsonify({"status": "error", "message": "No markets selected"}), 400
 
         if not bot_status["running"]:
-            thread = threading.Thread(target=run_bot_thread, args=(start_date, end_date,markets))
+            thread = threading.Thread(target=run_bot_thread, args=(start_date, end_date, markets))
             thread.start()
-            return jsonify({"message": f"Running bot for markets: {markets} from {start_date} to {end_date}", "status": "started"})
+            return jsonify(
+                {"message": f"Running bot for markets: {markets} from {start_date} to {end_date}", "status": "started"})
         else:
             return jsonify({"message": "Bot is already running", "status": "running"})
 
@@ -178,6 +194,7 @@ def run_bot():
         tb = traceback.format_exc()
         print(tb)  # print in server console
         return jsonify({"message": f"Error: {e}", "status": "error", "trace": tb})
+
 
 @bp.route("/bot-status")
 @login_required
