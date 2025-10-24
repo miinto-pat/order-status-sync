@@ -7,13 +7,15 @@ from flask_login import login_required, login_user, logout_user, current_user, U
 from constants.Constants import COUNTRY_CODES_AND_CAMPAIGNS
 from main import main, logger
 from utils.CommonUtils import common_utils
+from google.cloud import secretmanager
 
-bp = Blueprint('bp', __name__)  # ONLY once!
+bp = Blueprint('bp', __name__)
 
 # Minimal user store
-USERS = {"AV-Miinto": ".)k&J9&4Rf0A"}
+# USERS = {"AV-Miinto": ".)k&J9&4Rf0A"}
 
 class User(UserMixin):
+
     def __init__(self, id):
         self.id = id
 
@@ -119,6 +121,8 @@ def run_bot_thread(start_date=None, end_date=None, markets=None):
 # Routes
 @bp.route("/login", methods=["GET", "POST"])
 def login():
+    config = load_config_from_secret("flask-config")
+    USERS = config.get("USERS", {})
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
@@ -128,6 +132,14 @@ def login():
             return redirect(url_for("bp.dashboard"))
         flash("Invalid credentials")
     return render_template("login.html")
+
+def load_config_from_secret(secret_name: str):
+    client = secretmanager.SecretManagerServiceClient()
+    project_id = "373688639022"
+    secret_path = f"projects/{project_id}/secrets/impact_secret_json/versions/2"
+    response = client.access_secret_version(request={"name": secret_path})
+    secret_str = response.payload.data.decode("UTF-8")
+    return json.loads(secret_str)
 
 @bp.route("/logout")
 @login_required
