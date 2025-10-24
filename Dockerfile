@@ -10,8 +10,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy source code
 COPY . .
-
-EXPOSE 3000
+ENV PORT 8080
+EXPOSE 8080
 
 # Run main.py
 CMD ["python", "run.py"]
