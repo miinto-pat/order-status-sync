@@ -22,11 +22,18 @@ class OrderMiiUUID:
     }
 
     def __init__(self, market: str, order_id: int):
+        # 🔹 Normalize market name to uppercase
+        market = market.strip().upper()
         self.country_number = self.map_market_to_country_code(market)
         self.order_id = int(order_id)
+        self.market = market  # optional, to keep the normalized name
 
     @classmethod
     def map_market_to_country_code(cls, market: str) -> int:
+        # 🔹 Case-insensitive lookup
+        market = market.strip().upper()
+        if market not in cls.MARKETS_AND_COUNTRY_CODES:
+            raise ValueError(f"Unknown market: {market}")
         return cls.MARKETS_AND_COUNTRY_CODES[market]
 
     @classmethod
@@ -37,7 +44,6 @@ class OrderMiiUUID:
         raise ValueError(f"No market found for country code {country_code}")
 
     def to_uuid_string(self) -> str:
-        # Format: PREFIX-COUNTRYNUMBER-ORDERID in hex
         return f"{self.ORDER_MII_UUID_PREFIX}-{self.country_number:04X}-{self.order_id:012X}"
 
     def to_uuid(self) -> UUID:
@@ -63,8 +69,3 @@ class OrderMiiUUID:
         order_id = int(match.group("order_id"), 16)
         market = cls.map_country_code_to_market(country_number)
         return cls(market, order_id)
-
-if __name__ == "__main__":
-    order = OrderMiiUUID("DK", 2608643)
-    print(order.to_uuid_string())  # Hex-formatted UUID string
-    print(order.to_uuid())

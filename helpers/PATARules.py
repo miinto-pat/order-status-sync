@@ -1,6 +1,14 @@
 from typing import Tuple, Optional
 
 class PATARules:
+    FRAUD_KEYWORDS = [
+        "fraud risk",
+        "fraud order",
+        "do not refund",
+        "do not issue refund",
+        "declined rma process",
+        "lost parcels process",
+    ]
     @staticmethod
     def has_voucher_code(response: dict) -> bool:
         """
@@ -9,6 +17,29 @@ class PATARules:
         voucher = response.get("voucher") or {}
         code = voucher.get("code")
         return bool(code and str(code).strip())
+
+    @staticmethod
+    def detect_fraud(response: dict) -> bool:
+        """
+        Scan order history for fraud-related messages.
+        Returns True if found.
+        """
+        data = response.get("data", {})
+        history = data.get("history", [])
+        if not history:
+            return False
+
+        for note in history:
+            message = (note.get("message") or "").lower()
+            note_type = (note.get("type") or "").lower()
+            if note_type == "internal note":
+                for keyword in PATARules.FRAUD_KEYWORDS:
+                    if keyword in message:
+                        print(f"⚠️ Fraud/Do-Not-Refund detected: '{message}'")
+                        return True
+                    else:print(f"⚠️ Fraud not detected: '{message}'")
+
+        return False
 
     @staticmethod
     def calculate_action_reason_and_amount(response: dict) -> Tuple[Optional[str], Optional[int]]:
@@ -24,6 +55,9 @@ class PATARules:
         # 1) Voucher check
         order_data = response.get("data", {})
 
+        if PATARules.detect_fraud(response):
+            return "OTHER", 0
+
         if PATARules.has_voucher_code(order_data):
             return "OTHER", 0
 
@@ -37,7 +71,7 @@ class PATARules:
         for i, p in enumerate(positions, start=1):
             amount = p.get("amount", "<no amount>")
             status = p.get("status", "<no status>")
-            # print(f"  Position {i}: amount={amount}, status={status}")
+            print(f"  Position {i}: amount={amount}, status={status}")
 
 
 
