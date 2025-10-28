@@ -33,11 +33,11 @@ def load_config_from_secret(secret_name: str = "impact_secret_json"):
         logger.warning("➡️ Falling back to default local credentials.")
 
         # Provide fallback config
-        return {
-            "USERS": {
-                DEFAULT_USER["username"]: DEFAULT_USER["password"]
-            }
-        }
+        # return {
+        #     "USERS": {
+        #         DEFAULT_USER["username"]: DEFAULT_USER["password"]
+        #     }
+        # }
 
 
 # ✅ Load once at import time
