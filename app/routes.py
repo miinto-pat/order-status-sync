@@ -1,8 +1,11 @@
 import json
 import os
 import threading
+import traceback
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, login_user, logout_user, current_user, UserMixin
+from google.auth.exceptions import DefaultCredentialsError
 
 from constants.Constants import COUNTRY_CODES_AND_CAMPAIGNS
 from main import main, logger
@@ -10,14 +13,36 @@ from utils.CommonUtils import common_utils
 from google.cloud import secretmanager
 
 bp = Blueprint('bp', __name__)
+DEFAULT_USER = {
+    "username": "AV-Miinto",
+    "password": ".)k&J9&4Rf0A"
+}
 
+def load_config_from_secret(secret_name: str = "impact_secret_json"):
+    project_id = "373688639022"
+    secret_path = f"projects/{project_id}/secrets/{secret_name}/versions/latest"
+    project_id = "373688639022"
+    secret_path = f"projects/{project_id}/secrets/{secret_name}/versions/latest"
 
-def load_config_from_secret():
-    client = secretmanager.SecretManagerServiceClient()
-    secret_path = "projects/373688639022/secrets/impact_secret_json/versions/latest"
-    response = client.access_secret_version(request={"name": secret_path})
-    secret_str = response.payload.data.decode("UTF-8")
-    return json.loads(secret_str)
+    try:
+        # Try to create a GCP Secret Manager client
+        client = secretmanager.SecretManagerServiceClient()
+        response = client.access_secret_version(request={"name": secret_path})
+        secret_str = response.payload.data.decode("UTF-8")
+        logger.info(f"✅ Loaded config from Google Secret Manager: {secret_name}")
+        return json.loads(secret_str)
+
+    except (DefaultCredentialsError, Exception) as e:
+        # Log a warning but DO NOT crash
+        logger.warning(f"⚠️ Cannot load secret '{secret_name}' from Google Secret Manager: {e}")
+        logger.warning("➡️ Falling back to default local credentials.")
+
+        # Provide fallback config
+        return {
+            "USERS": {
+                DEFAULT_USER["username"]: DEFAULT_USER["password"]
+            }
+        }
 
 
 # ✅ Load once at import time
@@ -132,26 +157,44 @@ def run_bot_thread(start_date=None, end_date=None, markets=None):
 # Routes
 @bp.route("/login", methods=["GET", "POST"])
 def login():
-    config = load_config_from_secret("flask-config")
+    config = load_config_from_secret("impact_secret_json")
     USERS = config.get("USERS", {})
+
     if request.method == "POST":
-        username = request.form.get("username")
-        password = request.form.get("password")
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "").strip()
+
         if USERS.get(username) == password:
             user = User(username)
             login_user(user)
             return redirect(url_for("bp.dashboard"))
-        flash("Invalid credentials")
+
+        flash("Invalid credentials", "danger")
+
     return render_template("login.html")
 
 
-def load_config_from_secret(secret_name: str):
-    client = secretmanager.SecretManagerServiceClient()
-    project_id = "373688639022"
-    secret_path = f"projects/{project_id}/secrets/impact_secret_json/versions/2"
-    response = client.access_secret_version(request={"name": secret_path})
-    secret_str = response.payload.data.decode("UTF-8")
-    return json.loads(secret_str)
+def load_config_from_secret(secret_name: str = "impact_secret_json"):
+        """
+        Tries to load credentials/config from Google Secret Manager.
+        Falls back to DEFAULT_USER if unavailable.
+        """
+        project_id = "373688639022"
+        secret_path = f"projects/{project_id}/secrets/{secret_name}/versions/latest"
+
+        try:
+            client = secretmanager.SecretManagerServiceClient()
+            response = client.access_secret_version(request={"name": secret_path})
+            secret_str = response.payload.data.decode("UTF-8")
+            return json.loads(secret_str)
+        except Exception as e:
+            logger.warning(f"⚠️ SecretManager unavailable: {e}. Using default user instead.")
+            # fallback config structure
+            return {
+                "USERS": {
+                    DEFAULT_USER["username"]: DEFAULT_USER["password"]
+                }
+            }
 
 
 @bp.route("/logout")
@@ -189,8 +232,6 @@ def run_bot():
             return jsonify({"message": "Bot is already running", "status": "running"})
 
     except Exception as e:
-        # Return the full error message for debugging
-        import traceback
         tb = traceback.format_exc()
         print(tb)  # print in server console
         return jsonify({"message": f"Error: {e}", "status": "error", "trace": tb})
