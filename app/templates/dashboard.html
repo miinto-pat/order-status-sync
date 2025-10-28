@@ -151,101 +151,117 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
     msgDiv.innerText = status.message || "Running...";
 
     // Always ensure main results table exists
-    if (!document.getElementById("liveResultsTable")) {
-        statsDiv.innerHTML = `
-            <table id="liveResultsTable" class="table table-sm table-bordered">
-                <thead>
-                    <tr>
-                        <th>Market</th>
-                        <th>Total</th>
-                        <th>VOUCHER/Rejections</th>
-                        <th>FULLY_RETURNED</th>
-                        <th>ORDER_UPDATE</th>
-                        <th>Not Modified</th>
-                        <th>Not Processed</th>
-
-                    </tr>
-                </thead>
-                <tbody id="marketRows">
-                    <tr><td colspan="8" class="text-center text-muted">Waiting for results...</td></tr>
-                </tbody>
-            </table>
-            <div id="errorSummary" class="mt-3"></div>
-        `;
-    }
-
-    const tbody = document.getElementById("marketRows");
-    tbody.innerHTML = ""; // Clear and refresh each update
-
-    // Render market stats (even if partial)
-    if (status.market_stats && Object.keys(status.market_stats).length > 0) {
-        for (const [market, s] of Object.entries(status.market_stats)) {
-            tbody.insertAdjacentHTML("beforeend", `
-                <tr data-market="${market}">
-                    <td>${market}</td>
-                    <td>${s.total_actions ?? 0}</td>
-                    <td>${s.OTHER ?? 0}</td>
-                    <td>${s.ITEM_RETURNED ?? 0}</td>
-                    <td>${s.ORDER_UPDATE ?? 0}</td>
-                    <td>${s.Not_Modified ?? 0}</td>
-                    <td>${s.Not_Processed ?? 0}</td>
-
+  // --- Ensure main results table exists (once) ---
+if (!document.getElementById("liveResultsTable")) {
+    statsDiv.innerHTML = `
+        <table id="liveResultsTable" class="table table-sm table-bordered">
+            <thead>
+                <tr>
+                    <th>Market</th>
+                    <th>Total</th>
+                    <th>VOUCHER/Rejections</th>
+                    <th>FULLY_RETURNED</th>
+                    <th>ORDER_UPDATE</th>
+                    <th>Not Modified</th>
+                    <th>Not Processed</th>
                 </tr>
-            `);
-        }
-    } else {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted">No market data yet.</td></tr>`;
-    }
+            </thead>
+            <tbody id="marketRows"></tbody>
+        </table>
+        <div id="errorSummary" class="mt-3"></div>
+    `;
+}
 
-    // --- Render "Not Processed" actions table if any ---
-    // --- Render "Not Processed" actions table if any ---
+const tbody = document.getElementById("marketRows");
+
+// ✅ Update or append rows for markets dynamically (no clearing)
+if (status.market_stats && Object.keys(status.market_stats).length > 0) {
+    for (const [market, s] of Object.entries(status.market_stats)) {
+        // Try to find existing row for this market
+        let row = tbody.querySelector(`tr[data-market="${market}"]`);
+
+        // Create a new row if it doesn’t exist
+        if (!row) {
+            row = document.createElement("tr");
+            row.dataset.market = market;
+            row.innerHTML = `
+                <td>${market}</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+            `;
+            tbody.appendChild(row);
+        }
+
+        // Update row cells with latest stats
+        const cells = row.querySelectorAll("td");
+        cells[1].textContent = s.total_actions ?? 0;
+        cells[2].textContent = s.OTHER ?? 0;
+        cells[3].textContent = s.ITEM_RETURNED ?? 0;
+        cells[4].textContent = s.ORDER_UPDATE ?? 0;
+        cells[5].textContent = s.Not_Modified ?? 0;
+        cells[6].textContent = s.Not_Processed ?? 0;
+    }
+} else if (tbody.children.length === 0) {
+    // Only show placeholder once when no data exists at all
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">No market data yet.</td></tr>`;
+}
+
+
+
+// --- Render "Not Processed" actions table only when there are actual records ---
 if (status.not_processed && status.not_processed.length > 0) {
-    // Group Not Processed Actions by Market
+    // ✅ Group Not Processed Actions by Market
     const groupedByMarket = status.not_processed.reduce((acc, entry) => {
         if (!acc[entry.market]) acc[entry.market] = [];
         acc[entry.market].push(entry.action_id);
         return acc;
     }, {});
 
-    // Filter out markets with zero actions (just in case)
+    // ✅ Check if there is at least one valid market with records
     const validMarkets = Object.entries(groupedByMarket).filter(([_, ids]) => ids.length > 0);
 
     if (validMarkets.length > 0) {
-        // Only create and populate table if there are valid markets
-        let table = document.getElementById("notProcessedTable");
-        if (!table) {
+        // ✅ Create the table if it doesn’t already exist
+        if (!document.getElementById("notProcessedTable")) {
             statsDiv.insertAdjacentHTML("beforeend", `
-                <h5 class="mt-4">Not Processed Actions</h5>
-                <table id="notProcessedTable" class="table table-sm table-bordered mt-2">
-                    <thead>
-                        <tr>
-                            <th>Market</th>
-                            <th>Action IDs</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+                <div id="notProcessedWrapper" class="mt-4">
+                    <h5>Not Processed Actions</h5>
+                    <table id="notProcessedTable" class="table table-sm table-bordered mt-2">
+                        <thead>
+                            <tr>
+                                <th>Market</th>
+                                <th>Action IDs</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             `);
         }
 
         const tbody2 = document.querySelector("#notProcessedTable tbody");
-        tbody2.innerHTML = "";
+        const existingMarkets = new Set([...tbody2.querySelectorAll("tr")].map(tr => tr.dataset.market));
 
         // ✅ Populate only markets with actual not processed actions
         for (const [market, actionIds] of validMarkets) {
-            tbody2.insertAdjacentHTML("beforeend", `
-                <tr>
-                    <td>${market}</td>
-                    <td>${actionIds.join(", ")}</td>
-                </tr>
-            `);
-        }
+    let row = tbody2.querySelector(`tr[data-market="${market}"]`);
+    if (!row) {
+        row = document.createElement("tr");
+        row.dataset.market = market;
+        tbody2.appendChild(row);
     }
-} else {
-    // If no not processed records at all, don't show or repopulate anything
-    const existing = document.getElementById("notProcessedTable");
-    if (existing) existing.remove(); // Optional — remove if previously shown
+    row.innerHTML = `<td>${market}</td><td>${actionIds.join(", ")}</td>`;
 }
+
+// Remove old markets no longer present
+tbody2.querySelectorAll("tr").forEach(tr => {
+    if (!groupedByMarket[tr.dataset.market]) tr.remove();
+});
+
 
 
 
