@@ -79,7 +79,6 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
                                  .map(cb => cb.value);
 
     let missingFields = [];
-
     if (!startDate) missingFields.push("start date");
     if (!endDate) missingFields.push("end date");
     if (selectedMarkets.length === 0) missingFields.push("at least one market");
@@ -94,6 +93,16 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
     if (new Date(endDate) < new Date(startDate)) {
         msgDiv.className = "alert alert-danger mt-2";
         msgDiv.innerText = "End date must be after the start date.";
+        btn.disabled = false; // ✅ CHANGE: ensure button re-enabled
+        return;
+    }
+
+    // ✅ CHANGE: optional max market limit to prevent payload issues
+    const MAX_MARKETS = 50;
+    if (selectedMarkets.length > MAX_MARKETS) {
+        msgDiv.className = "alert alert-warning mt-2";
+        msgDiv.innerText = `You can select up to ${MAX_MARKETS} markets at a time.`;
+        btn.disabled = false; // ✅ CHANGE
         return;
     }
 
@@ -103,237 +112,194 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
     statsDiv.innerHTML = "";
     btn.disabled = true;
 
+    // ✅ CHANGE: clear any existing polling interval before starting a new one
+    if (window.botInterval) clearInterval(window.botInterval);
 
     // Start bot
     fetch("{{ url_for('bp.run_bot') }}", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ start_date: startDate,
-         end_date: endDate,
-         markets: selectedMarkets})
+        body: JSON.stringify({
+            start_date: startDate,
+            end_date: endDate,
+            markets: selectedMarkets
+        })
     })
     .then(resp => {
         if (!resp.ok) {
-            // HTTP error -> show friendly message
             throw new Error("Error while retrieving actions");
         }
         return resp.json();
     })
     .then(data => {
         if (data.status === "error") {
-            // Backend returned an error
             msgDiv.className = "alert alert-danger mt-2";
-            msgDiv.innerText = "Error while retrieving actions";
-            btn.disabled = false;
-            return; // Stop further processing
+            msgDiv.innerText = data.message || "Error while retrieving actions";
+            btn.disabled = false; // ✅ CHANGE: re-enable on backend error
+            return;
         }
 
         msgDiv.className = "alert alert-info mt-2";
         msgDiv.innerText = data.message;
 
-        // Start polling for bot status
-        startPolling();
+        // ✅ CHANGE: save interval globally for later clearing
+        window.botInterval = startPolling();
     })
     .catch(err => {
         msgDiv.className = "alert alert-danger mt-2";
         msgDiv.innerText = err.message || "Error starting bot.";
-        btn.disabled = false;
+        btn.disabled = false; // ✅ CHANGE: ensure button re-enabled
         console.error(err);
     });
 
     // Polling function separated
     function startPolling() {
-    const interval = setInterval(() => {
-        fetch("{{ url_for('bp.bot_status_endpoint') }}")
-            .then(resp => resp.json())
-.then(status => {
-    msgDiv.innerText = status.message || "Running...";
+        return setInterval(() => {
+            fetch("{{ url_for('bp.bot_status_endpoint') }}")
+                .then(resp => resp.json())
+                .then(status => {
+                    msgDiv.innerText = status.message || "Running...";
 
-    // Always ensure main results table exists
-    if (!document.getElementById("liveResultsTable")) {
-        statsDiv.innerHTML = `
-            <table id="liveResultsTable" class="table table-sm table-bordered">
-                <thead>
-                    <tr>
-                        <th>Market</th>
-                        <th>Total</th>
-                        <th>VOUCHER/Rejections</th>
-                        <th>FULLY_RETURNED</th>
-                        <th>ORDER_UPDATE</th>
-                        <th>Not Modified</th>
-                        <th>Not Processed</th>
+                    // Render main table
+                    if (!document.getElementById("liveResultsTable")) {
+                        statsDiv.innerHTML = `
+                            <table id="liveResultsTable" class="table table-sm table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Market</th>
+                                        <th>Total</th>
+                                        <th>VOUCHER/Rejections</th>
+                                        <th>FULLY_RETURNED</th>
+                                        <th>ORDER_UPDATE</th>
+                                        <th>Not Modified</th>
+                                        <th>Not Processed</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="marketRows">
+                                    <tr><td colspan="8" class="text-center text-muted">Waiting for results...</td></tr>
+                                </tbody>
+                            </table>
+                            <div id="errorSummary" class="mt-3"></div>
+                        `;
+                    }
 
-                    </tr>
-                </thead>
-                <tbody id="marketRows">
-                    <tr><td colspan="8" class="text-center text-muted">Waiting for results...</td></tr>
-                </tbody>
-            </table>
-            <div id="errorSummary" class="mt-3"></div>
-        `;
-    }
+                    const tbody = document.getElementById("marketRows");
+                    tbody.innerHTML = ""; // Clear and refresh each update
 
-    const tbody = document.getElementById("marketRows");
-    tbody.innerHTML = ""; // Clear and refresh each update
+                    if (status.market_stats && Object.keys(status.market_stats).length > 0) {
+                        for (const [market, s] of Object.entries(status.market_stats)) {
+                            tbody.insertAdjacentHTML("beforeend", `
+                                <tr data-market="${market}">
+                                    <td>${market}</td>
+                                    <td>${s.total_actions ?? 0}</td>
+                                    <td>${s.OTHER ?? 0}</td>
+                                    <td>${s.ITEM_RETURNED ?? 0}</td>
+                                    <td>${s.ORDER_UPDATE ?? 0}</td>
+                                    <td>${s.Not_Modified ?? 0}</td>
+                                    <td>${s.Not_Processed ?? 0}</td>
+                                </tr>
+                            `);
+                        }
+                    } else {
+                        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted">No market data yet.</td></tr>`;
+                    }
 
-    // Render market stats (even if partial)
-    if (status.market_stats && Object.keys(status.market_stats).length > 0) {
-        for (const [market, s] of Object.entries(status.market_stats)) {
-            tbody.insertAdjacentHTML("beforeend", `
-                <tr data-market="${market}">
-                    <td>${market}</td>
-                    <td>${s.total_actions ?? 0}</td>
-                    <td>${s.OTHER ?? 0}</td>
-                    <td>${s.ITEM_RETURNED ?? 0}</td>
-                    <td>${s.ORDER_UPDATE ?? 0}</td>
-                    <td>${s.Not_Modified ?? 0}</td>
-                    <td>${s.Not_Processed ?? 0}</td>
+                    // Not Processed actions table
+                    if (status.not_processed && status.not_processed.length > 0) {
+                        let table = document.getElementById("notProcessedTable");
+                        if (!table) {
+                            statsDiv.insertAdjacentHTML("beforeend", `
+                                <h5 class="mt-4">Not Processed Actions</h5>
+                                <table id="notProcessedTable" class="table table-sm table-bordered mt-2">
+                                    <thead>
+                                        <tr>
+                                            <th>Market</th>
+                                            <th>Action IDs</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            `);
+                        }
 
-                </tr>
-            `);
-        }
-    } else {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted">No market data yet.</td></tr>`;
-    }
+                        const tbody2 = document.querySelector("#notProcessedTable tbody");
+                        tbody2.innerHTML = "";
 
-    // --- Render "Not Processed" actions table if any ---
-    // --- Render "Not Processed" actions table if any ---
-    if (status.not_processed && status.not_processed.length > 0) {
-        let table = document.getElementById("notProcessedTable");
-        if (!table) {
-            statsDiv.insertAdjacentHTML("beforeend", `
-                <h5 class="mt-4">Not Processed Actions</h5>
-                <table id="notProcessedTable" class="table table-sm table-bordered mt-2">
-                    <thead>
-                        <tr>
-                            <th>Market</th>
-                            <th>Action IDs</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            `);
-        }
+                        const groupedByMarket = status.not_processed.reduce((acc, entry) => {
+                            if (!acc[entry.market]) acc[entry.market] = [];
+                            acc[entry.market].push(entry.action_id);
+                            return acc;
+                        }, {});
 
-        const tbody2 = document.querySelector("#notProcessedTable tbody");
-        tbody2.innerHTML = "";
+                        for (const [market, actionIds] of Object.entries(groupedByMarket)) {
+                            tbody2.insertAdjacentHTML("beforeend", `
+                                <tr>
+                                    <td>${market}</td>
+                                    <td>${actionIds.join(", ")}</td>
+                                </tr>
+                            `);
+                        }
+                    } else {
+                        const existing = document.getElementById("notProcessedTable");
+                        if (existing) existing.remove();
+                    }
 
-        // ✅ Group Not Processed Actions by Market
-        const groupedByMarket = status.not_processed.reduce((acc, entry) => {
-            if (!acc[entry.market]) acc[entry.market] = [];
-            acc[entry.market].push(entry.action_id);
-            return acc;
-        }, {});
+                    // Error summary
+                    const errorSummaryDiv = document.getElementById("errorSummary");
+                    let failedMarkets = [];
+                    if (status.market_stats) {
+                        for (const [market, s] of Object.entries(status.market_stats)) {
+                            if (s.error) failedMarkets.push({ market, error: s.error });
+                        }
+                    }
+                    if (status.not_processed) {
+                        status.not_processed.forEach(e => {
+                            if (e.action_id === "N/A" && e.error) {
+                                failedMarkets.push({ market: e.market, error: e.error });
+                            }
+                        });
+                    }
 
-        // ✅ Render grouped results (comma-separated)
-        for (const [market, actionIds] of Object.entries(groupedByMarket)) {
-            tbody2.insertAdjacentHTML("beforeend", `
-                <tr>
-                    <td>${market}</td>
-                    <td>${actionIds.join(", ")}</td>
-                </tr>
-            `);
-        }
-    } else {
-        // Remove the table if there are no not-processed actions
-        const existing = document.getElementById("notProcessedTable");
-        if (existing) existing.remove();
-    }
+                    const seen = new Set();
+                    failedMarkets = failedMarkets.filter(f => {
+                        if (seen.has(f.market)) return false;
+                        seen.add(f.market);
+                        return true;
+                    });
 
+                    if (failedMarkets.length > 0) {
+                        errorSummaryDiv.className = "alert alert-danger";
+                        errorSummaryDiv.innerHTML = `
+                            <strong>⚠️ Some markets failed:</strong>
+                            <ul class="mb-0">
+                                ${failedMarkets.map(f => `<li><b>${f.market}</b>: ${f.error}</li>`).join("")}
+                            </ul>
+                        `;
+                    } else {
+                        errorSummaryDiv.innerHTML = "";
+                        errorSummaryDiv.className = "";
+                    }
 
-
-    // --- NEW: Show failed markets under main table ---
-    let failedMarkets = [];
-
-    // Collect failed markets from market_stats
-    if (status.market_stats) {
-        for (const [market, s] of Object.entries(status.market_stats)) {
-            if (s.error) failedMarkets.push({ market, error: s.error });
-        }
-    }
-
-    // Collect totally failed ones from not_processed
-    if (status.not_processed && status.not_processed.length > 0) {
-        status.not_processed.forEach(e => {
-            if (e.action_id === "N/A" && e.error) {
-                failedMarkets.push({ market: e.market, error: e.error });
-            }
-        });
-    }
-
-    // Remove duplicates
-    const seen = new Set();
-    failedMarkets = failedMarkets.filter(f => {
-        if (seen.has(f.market)) return false;
-        seen.add(f.market);
-        return true;
-    });
-
-    // Render error summary below main table
-    const errorSummaryDiv = document.getElementById("errorSummary");
-    if (failedMarkets.length > 0) {
-        errorSummaryDiv.className = "alert alert-danger";
-        errorSummaryDiv.innerHTML = `
-            <strong>⚠️ Some markets failed:</strong>
-            <ul class="mb-0">
-                ${failedMarkets.map(f => `<li><b>${f.market}</b>: ${f.error}</li>`).join("")}
-            </ul>
-        `;
-    } else {
-        errorSummaryDiv.innerHTML = "";
-        errorSummaryDiv.className = "";
-    }
-
-    // Stop polling if finished or error
-    if (["finished", "error"].includes(status.status)) {
-        clearInterval(interval);
-        btn.disabled = false;
-        msgDiv.className =
-            status.status === "finished"
-                ? "alert alert-success mt-2"
-                : "alert alert-danger mt-2";
-    }
-})
-
-
-
-            .catch(err => {
-                console.error("Polling error:", err);
-                clearInterval(interval);
-                btn.disabled = false;
-            });
-    }, 1000);
-}
-
-    // Function to render table only on successful completion
-    function renderTable(marketStats) {
-        if (!marketStats) return;
-
-        let html = "<table class='table table-sm table-bordered'>";
-        html += "<thead><tr><th>Market</th><th>Total</th><th>VOUCHER/Rejections</th><th>FULLY_RETURNED</th><th>ORDER_UPDATE</th><th>Not Modified</th><th>Not Processed</th></tr></thead><tbody>";
-
-        for (const [market, s] of Object.entries(marketStats)) {
-            html += `<tr>
-                <td>${market}</td>
-                <td>${s.total_actions || 0}</td>
-                <td>${s.OTHER || 0}</td>
-                <td>${s.ITEM_RETURNED || 0}</td>
-                <td>${s.ORDER_UPDATE || 0}</td>
-                <td>${s.Not_Modified || 0}</td>
-                <td>${s.Not_Processed || 0}</td>
-                <td>${s.error || ""}</td>
-            </tr>`;
-        }
-
-        html += "</tbody></table>";
-        statsDiv.innerHTML = html;
+                    // Stop polling if finished or error
+                    if (["finished", "error"].includes(status.status)) {
+                        clearInterval(window.botInterval); // ✅ CHANGE: clear global interval
+                        btn.disabled = false; // ✅ CHANGE: re-enable button
+                        msgDiv.className =
+                            status.status === "finished"
+                                ? "alert alert-success mt-2"
+                                : "alert alert-danger mt-2";
+                    }
+                })
+                .catch(err => {
+                    console.error("Polling error:", err);
+                    clearInterval(window.botInterval); // ✅ CHANGE: stop polling on error
+                    btn.disabled = false; // ✅ CHANGE: re-enable button
+                });
+        }, 1000);
     }
 });
-
-
 </script>
-
 
 
 </div>
