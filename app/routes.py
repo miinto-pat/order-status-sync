@@ -17,7 +17,7 @@ bp = Blueprint('bp', __name__)
 
 def load_config_from_secret(secret_name: str = "impact_secret_json"):
     project_id = "373688639022"
-    secret_path = f"projects/{project_id}/secrets/{secret_name}/versions/4"
+    secret_path = f"projects/{project_id}/secrets/{secret_name}/versions/5"
 
     try:
         # Try to create a GCP Secret Manager client
