@@ -198,7 +198,20 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
     }
 
     // --- Render "Not Processed" actions table if any ---
-    if (status.not_processed && status.not_processed.length > 0) {
+    // --- Render "Not Processed" actions table if any ---
+if (status.not_processed && status.not_processed.length > 0) {
+    // Group Not Processed Actions by Market
+    const groupedByMarket = status.not_processed.reduce((acc, entry) => {
+        if (!acc[entry.market]) acc[entry.market] = [];
+        acc[entry.market].push(entry.action_id);
+        return acc;
+    }, {});
+
+    // Filter out markets with zero actions (just in case)
+    const validMarkets = Object.entries(groupedByMarket).filter(([_, ids]) => ids.length > 0);
+
+    if (validMarkets.length > 0) {
+        // Only create and populate table if there are valid markets
         let table = document.getElementById("notProcessedTable");
         if (!table) {
             statsDiv.insertAdjacentHTML("beforeend", `
@@ -218,15 +231,8 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
         const tbody2 = document.querySelector("#notProcessedTable tbody");
         tbody2.innerHTML = "";
 
-        // ✅ Group Not Processed Actions by Market
-        const groupedByMarket = status.not_processed.reduce((acc, entry) => {
-            if (!acc[entry.market]) acc[entry.market] = [];
-            acc[entry.market].push(entry.action_id);
-            return acc;
-        }, {});
-
-        // ✅ Render grouped results (comma-separated)
-        for (const [market, actionIds] of Object.entries(groupedByMarket)) {
+        // ✅ Populate only markets with actual not processed actions
+        for (const [market, actionIds] of validMarkets) {
             tbody2.insertAdjacentHTML("beforeend", `
                 <tr>
                     <td>${market}</td>
@@ -234,11 +240,13 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
                 </tr>
             `);
         }
-    } else {
-        // Remove the table if there are no not-processed actions
-        const existing = document.getElementById("notProcessedTable");
-        if (existing) existing.remove();
     }
+} else {
+    // If no not processed records at all, don't show or repopulate anything
+    const existing = document.getElementById("notProcessedTable");
+    if (existing) existing.remove(); // Optional — remove if previously shown
+}
+
 
 
 
