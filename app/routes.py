@@ -13,14 +13,9 @@ from utils.CommonUtils import common_utils
 from google.cloud import secretmanager
 
 bp = Blueprint('bp', __name__)
-DEFAULT_USER = {
-    "username": "AV-Miinto",
-    "password": ".)k&J9&4Rf0A"
-}
+
 
 def load_config_from_secret(secret_name: str = "impact_secret_json"):
-    project_id = "373688639022"
-    secret_path = f"projects/{project_id}/secrets/{secret_name}/versions/latest"
     project_id = "373688639022"
     secret_path = f"projects/{project_id}/secrets/{secret_name}/versions/latest"
 
@@ -190,11 +185,11 @@ def load_config_from_secret(secret_name: str = "impact_secret_json"):
         except Exception as e:
             logger.warning(f"⚠️ SecretManager unavailable: {e}. Using default user instead.")
             # fallback config structure
-            return {
-                "USERS": {
-                    DEFAULT_USER["username"]: DEFAULT_USER["password"]
-                }
-            }
+            # return {
+            #     "USERS": {
+            #         DEFAULT_USER["username"]: DEFAULT_USER["password"]
+            #     }
+            # }
 
 
 @bp.route("/logout")
