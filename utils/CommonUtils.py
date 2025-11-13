@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 from typing import Dict, Any
 
+from constants.Constants import VAT
+
 
 class common_utils:
     @staticmethod
@@ -80,3 +82,10 @@ class common_utils:
             f"No {filename} found in {', '.join(str(x) for x in candidates)} and "
             "impact_secret_json / IMPACT_SECRET_JSON env var is not set."
         )
+
+    @staticmethod
+    def exclude_VAT(market, cost):
+        vat_rate = VAT.get(market)
+        if vat_rate is None:
+            raise ValueError(f"No VAT rate found for market '{market}'")
+        return cost / (1 + vat_rate / 100)

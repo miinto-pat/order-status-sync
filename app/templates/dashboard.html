@@ -192,7 +192,7 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
         const isProcessing = status.message.includes(market) && !s.error;
         row.className = isProcessing ? "table-warning" : ""; // yellow background for processing
 
-        
+
         row.innerHTML = `
             <td>${market}${isProcessing ? " ⏳ Processing..." : ""}</td>
             <td>${s.total_actions ?? 0}</td>
