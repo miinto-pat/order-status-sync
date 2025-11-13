@@ -15,29 +15,64 @@ from google.cloud import secretmanager
 bp = Blueprint('bp', __name__)
 
 
+# def load_config_from_secret(secret_name: str = "impact_secret_json"):
+#     project_id = "373688639022"
+#     secret_path = f"projects/{project_id}/secrets/{secret_name}/versions/5"
+#
+#     try:
+#         # Try to create a GCP Secret Manager client
+#         client = secretmanager.SecretManagerServiceClient()
+#         response = client.access_secret_version(request={"name": secret_path})
+#         secret_str = response.payload.data.decode("UTF-8")
+#         logger.info(f"✅ Loaded config from Google Secret Manager: {secret_name}")
+#         return json.loads(secret_str)
+#
+#     except (DefaultCredentialsError, Exception) as e:
+#         # Log a warning but DO NOT crash
+#         logger.warning(f"⚠️ Cannot load secret '{secret_name}' from Google Secret Manager: {e}")
+#         logger.warning("➡️ Falling back to default local credentials.")
+#
+#         # Provide fallback config
+#         return {
+#             "USERS": {
+#                 DEFAULT_USER["username"]: DEFAULT_USER["password"]
+#             }
+#         }
+
 def load_config_from_secret(secret_name: str = "impact_secret_json"):
-    project_id = "373688639022"
-    secret_path = f"projects/{project_id}/secrets/{secret_name}/versions/5"
+        """
+        Tries to load credentials/config from Google Secret Manager.
+        Falls back to DEFAULT_USER if unavailable.
+        """
+        project_id = "373688639022"
+        secret_path = f"projects/{project_id}/secrets/{secret_name}/versions/latest"
 
-    try:
-        # Try to create a GCP Secret Manager client
-        client = secretmanager.SecretManagerServiceClient()
-        response = client.access_secret_version(request={"name": secret_path})
-        secret_str = response.payload.data.decode("UTF-8")
-        logger.info(f"✅ Loaded config from Google Secret Manager: {secret_name}")
-        return json.loads(secret_str)
+        try:
+            client = secretmanager.SecretManagerServiceClient()
+            response = client.access_secret_version(request={"name": secret_path})
+            secret_str = response.payload.data.decode("UTF-8")
+            return json.loads(secret_str)
+        except Exception as e:
+            logger.warning(f"SecretManager unavailable: {e}. Using default user instead.")
+            # fallback config structure
+            try:
+                local_config_path = os.path.join(
+                    os.path.dirname(os.path.dirname(__file__)),
+                    "config.json"
+                )
+                with open(local_config_path, "r", encoding="utf-8") as f:
+                    local_config = json.load(f)
+                    logger.info(f"Loaded fallback config from {local_config_path}")
+                    return local_config
+            except Exception as e2:
+                logger.error(f"Failed to load fallback config file: {e2}")
+                # Last-resort fallback (hardcoded user)
+                return {
+                    "USERS": {
+                        "AV-Miinto": ".)k&J9&4Rf0A"
+                    }
+                }
 
-    except (DefaultCredentialsError, Exception) as e:
-        # Log a warning but DO NOT crash
-        logger.warning(f"⚠️ Cannot load secret '{secret_name}' from Google Secret Manager: {e}")
-        logger.warning("➡️ Falling back to default local credentials.")
-
-        # Provide fallback config
-        # return {
-        #     "USERS": {
-        #         DEFAULT_USER["username"]: DEFAULT_USER["password"]
-        #     }
-        # }
 
 
 # ✅ Load once at import time
@@ -105,7 +140,6 @@ def run_bot_thread(start_date=None, end_date=None, markets=None):
                     "OTHER": 0,
                     "ITEM_RETURNED": 0,
                     "ORDER_UPDATE": 0,
-                    "Not_Modified": 0,
                     "Not_Processed": 0,
                     "error": str(e),
                 }
@@ -167,29 +201,6 @@ def login():
         flash("Invalid credentials", "danger")
 
     return render_template("login.html")
-
-
-def load_config_from_secret(secret_name: str = "impact_secret_json"):
-        """
-        Tries to load credentials/config from Google Secret Manager.
-        Falls back to DEFAULT_USER if unavailable.
-        """
-        project_id = "373688639022"
-        secret_path = f"projects/{project_id}/secrets/{secret_name}/versions/latest"
-
-        try:
-            client = secretmanager.SecretManagerServiceClient()
-            response = client.access_secret_version(request={"name": secret_path})
-            secret_str = response.payload.data.decode("UTF-8")
-            return json.loads(secret_str)
-        except Exception as e:
-            logger.warning(f"⚠️ SecretManager unavailable: {e}. Using default user instead.")
-            # fallback config structure
-            # return {
-            #     "USERS": {
-            #         DEFAULT_USER["username"]: DEFAULT_USER["password"]
-            #     }
-            # }
 
 
 @bp.route("/logout")

@@ -84,8 +84,11 @@ class common_utils:
         )
 
     @staticmethod
-    def exclude_VAT(market, cost):
+    def exclude_VAT(cost, market):
         vat_rate = VAT.get(market)
+        if cost is None:
+            print(f"⚠️ exclude_VAT: cost is None for market {market}, returning 0")
+        print(f"VAT rate for market: {market} is {vat_rate}")
         if vat_rate is None:
             raise ValueError(f"No VAT rate found for market '{market}'")
         return cost / (1 + vat_rate / 100)

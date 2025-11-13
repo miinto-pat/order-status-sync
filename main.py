@@ -62,8 +62,6 @@ class main:
             "NONE": 0
         }
         not_processed_ids = []
-        # ✅ Process each action
-        # for action in actions:
         for idx, action in enumerate(actions):
             try:
                 order_id_impact = int(action.get("Oid"))
@@ -82,33 +80,48 @@ class main:
                     continue
 
                 reason, amount = PATARules.calculate_action_reason_and_amount(order)
-                amount_without_vat = common_utils.exclude_VAT(amount,market)
+                if amount is None:
+                    print(f"⚠️ Skipping action {action_id} for market {market}: amount is None")
+                    stats["Not_Modified"] += 1
+                    # not_processed_ids.append({"market": market, "action_id": action_id, "reason": "amount_is_none"})
+                    continue
+                print(f"checking VAT for market: {market}")
 
+                amount_without_vat = common_utils.exclude_VAT(amount,market)
 
 
                 if reason in ("OTHER", "ITEM_RETURNED"):
                     result = impact_client.reverse_action(action_id, amount_without_vat, reason)
+                    print("✅ Returned from reverse_action")
+                    print(f"result: {result}")
                     if result is None:
                         stats["Not_Processed"] += 1
                         not_processed_ids.append({"market": market, "action_id": action_id})
                         continue
+                    else:
+                        stats[reason] += 1
 
                 elif reason == "ORDER_UPDATE":
                     result=impact_client.update_action(action_id, amount_without_vat, reason)
+                    print("✅ Returned from update_action")
+                    print(f"result: {result}")
                     if result is None:
                         stats["Not_Processed"] += 1
                         not_processed_ids.append({"market": market, "action_id": action_id})
                         continue
+                    else:
+                        stats[reason] += 1
 
-
-                if reason in stats:
-                    stats[reason] += 1
+                else:
+                    if reason in stats:
+                        stats[reason] += 1
 
             except Exception as e:
-                # Capture per-action errors without stopping the loop
+                print(f"❌ Exception while processing action {action_id}: {e}")
                 stats["Not_Processed"] += 1
                 not_processed_ids.append({"market": market, "action_id": action.get("Id"), "error": str(e)})
 
+        # Calculate Not_Modified
         # Calculate Not_Modified
         stats["Not_Modified"] = stats["total_actions"] - (
                 stats["Not_Processed"] + stats["OTHER"] + stats["ITEM_RETURNED"] + stats["ORDER_UPDATE"]
