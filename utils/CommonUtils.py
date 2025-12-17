@@ -1,6 +1,9 @@
+import csv
 import datetime
+import io
 import json
 import os
+from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 from typing import Dict, Any
 
@@ -91,4 +94,54 @@ class common_utils:
         print(f"VAT rate for market: {market} is {vat_rate}")
         if vat_rate is None:
             raise ValueError(f"No VAT rate found for market '{market}'")
-        return cost / (1 + vat_rate / 100)
+        # return cost / (1 + vat_rate / 100)
+
+        net_cost = Decimal(str(cost)) / (Decimal("1") + Decimal(str(vat_rate)) / Decimal("100"))
+        return float(net_cost.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+    @staticmethod
+    def create_market_csv(market, actions_by_state,allowed_states,target_state):
+        rows = []
+
+        for state, items in actions_by_state.items():
+            if not items or state not in allowed_states:
+                continue
+            for entry in items:
+                if target_state == "processed":
+                    rows.append([
+                        entry.get("orderId"),
+                        entry.get("amount"),
+                        state
+                    ])
+                else:
+                    rows.append([
+                        state,
+                        entry.get("orderId"),
+                    ])
+
+        # If no rows, do not create a file
+        if not rows:
+            print("No items to write. CSV file not created.")
+            return None
+
+        # Prepare header
+        if target_state == "processed":
+            header = [ "orderId",  "amount","state"]
+        else:
+            header = ["state", "orderId"]
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(header)
+        writer.writerows(rows)
+
+        filename = f"{market}_{target_state}_results.csv"
+        output_dir = os.path.join(os.getcwd(), "output")
+        os.makedirs(output_dir, exist_ok=True)
+        file_path = os.path.join(output_dir, filename)
+
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(output.getvalue())
+
+        return file_path
+

@@ -1,43 +1,21 @@
 import json
 import os
+import tempfile
 import threading
 import traceback
+import zipfile
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file
 from flask_login import login_required, login_user, logout_user, current_user, UserMixin
-from google.auth.exceptions import DefaultCredentialsError
 
 from constants.Constants import COUNTRY_CODES_AND_CAMPAIGNS
 from main import main, logger
+from utils import CommonUtils
 from utils.CommonUtils import common_utils
 from google.cloud import secretmanager
+from flask import current_app
 
 bp = Blueprint('bp', __name__)
-
-
-# def load_config_from_secret(secret_name: str = "impact_secret_json"):
-#     project_id = "373688639022"
-#     secret_path = f"projects/{project_id}/secrets/{secret_name}/versions/5"
-#
-#     try:
-#         # Try to create a GCP Secret Manager client
-#         client = secretmanager.SecretManagerServiceClient()
-#         response = client.access_secret_version(request={"name": secret_path})
-#         secret_str = response.payload.data.decode("UTF-8")
-#         logger.info(f"✅ Loaded config from Google Secret Manager: {secret_name}")
-#         return json.loads(secret_str)
-#
-#     except (DefaultCredentialsError, Exception) as e:
-#         # Log a warning but DO NOT crash
-#         logger.warning(f"⚠️ Cannot load secret '{secret_name}' from Google Secret Manager: {e}")
-#         logger.warning("➡️ Falling back to default local credentials.")
-#
-#         # Provide fallback config
-#         return {
-#             "USERS": {
-#                 DEFAULT_USER["username"]: DEFAULT_USER["password"]
-#             }
-#         }
 
 def load_config_from_secret(secret_name: str = "impact_secret_json"):
         """
@@ -87,8 +65,39 @@ class User(UserMixin):
 
 
 # Global bot status
-bot_status = {"running": False, "message": "Idle", "status": "idle", "market_stats": {}}
+bot_status = {"running": False,
+              "message": "Idle",
+              "status": "idle",
+              "market_stats": {},
+              "zip_path": None,
+              "csv_paths": {}
+              }
 
+@bp.route("/download-csv")
+def download_csv():
+    csv_path = current_app.config.get("LAST_CSV_PATH")
+    if not csv_path or not os.path.exists(csv_path):
+            return {"error": "CSV not found"}, 404
+
+    return send_file(
+            csv_path,
+            as_attachment=True,
+            download_name=os.path.basename(csv_path),
+            mimetype="text/csv"
+        )
+
+@bp.route("/download-zip")
+def download_zip():
+    zip_path = bot_status.get("zip_path")
+    if not zip_path or not os.path.exists(zip_path):
+        return {"error": "ZIP not found"}, 404
+
+    return send_file(
+        zip_path,
+        as_attachment=True,
+        download_name="impact_results.zip",
+        mimetype="application/zip"
+    )
 
 def run_bot_thread(start_date=None, end_date=None, markets=None):
     global bot_status
@@ -99,6 +108,7 @@ def run_bot_thread(start_date=None, end_date=None, markets=None):
         "status": "started",
         "market_stats": {},
         "not_processed": [],
+        "actions_by_state": {}
     })
 
     try:
@@ -122,6 +132,16 @@ def run_bot_thread(start_date=None, end_date=None, markets=None):
                 result = bot.process_single_market(campaign_id, market, start_date, end_date)
                 stats = result["stats"]
                 not_processed = result["not_processed"]
+                actions_by_state = result.get("actions_by_state", {})
+                allowed_states_processed = {"OTHER", "ORDER_UPDATE", "ITEM_RETURNED"}
+
+                processed_csv_path=CommonUtils.common_utils.create_market_csv(market,actions_by_state,allowed_states_processed,"processed")
+                allowed_states_not_processed = {"Not_Processed"}
+                not_processed_csv_path=CommonUtils.common_utils.create_market_csv(market,actions_by_state,allowed_states_not_processed,"not_processed")
+
+                bot_status.setdefault("csv_paths", {})
+                bot_status["csv_paths"][f"{market}_processed"] = processed_csv_path
+                bot_status["csv_paths"][f"{market}_not_processed"] = not_processed_csv_path
 
                 # ✅ Save results
                 bot_status["market_stats"][market] = {
@@ -149,13 +169,37 @@ def run_bot_thread(start_date=None, end_date=None, markets=None):
                     "action_id": "N/A",
                     "error": str(e),
                 })
+                bot_status["actions_by_state"][market] = {}
+
                 bot_status["not_processed"] = not_processed_all
                 bot_status["message"] = f"⚠️ Failed market: {market}, continuing..."
                 continue
 
+
+
+        csv_paths = bot_status.get("csv_paths", {})
+
+        if csv_paths:
+            # Create temp ZIP file
+            zip_fd, zip_path = tempfile.mkstemp(suffix=".zip")
+            os.close(zip_fd)
+
+            with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+                for key, csv_path in csv_paths.items():
+                    if csv_path and os.path.exists(csv_path):
+                        zipf.write(
+                            csv_path,
+                            arcname=os.path.basename(csv_path)
+                        )
+
+            bot_status["zip_path"] = zip_path
+            print(f"zip path: {zip_path}")
+
         # ✅ If all markets processed (even if some failed)
         bot_status["status"] = "finished"
         bot_status["message"] = f"✅ Bot finished. {len(campaign_ids)} market(s) processed."
+        bot_status["running"] = False
+
 
     except Exception as e:
         # ❌ Global setup error
@@ -175,12 +219,9 @@ def run_bot_thread(start_date=None, end_date=None, markets=None):
         })
 
     finally:
-        # ✅ Always run this even on crash
-        if bot_status["status"] not in ("finished", "error"):
-            bot_status["status"] = "error"
-            bot_status["message"] = "Bot stopped unexpectedly. Partial results available."
+        pass
 
-        bot_status["running"] = False
+
 
 
 # Routes
@@ -246,4 +287,11 @@ def run_bot():
 @bp.route("/bot-status")
 @login_required
 def bot_status_endpoint():
-    return jsonify(bot_status)
+    # return jsonify(bot_status)
+     return jsonify({
+            "status": bot_status.get("status"),
+            "message": bot_status.get("message"),
+            "market_stats": bot_status.get("market_stats"),
+            "not_processed": bot_status.get("not_processed"),
+            "zip_path": bot_status.get("zip_path")  # add this
+        })

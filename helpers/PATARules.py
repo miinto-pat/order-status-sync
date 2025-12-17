@@ -54,6 +54,8 @@ class PATARules:
         """
         # 1) Voucher check
         order_data = response.get("data", {})
+        print(f"order data: {order_data}")
+
 
         if PATARules.detect_fraud(response):
             return "OTHER", 0
@@ -67,7 +69,7 @@ class PATARules:
 
         # 🔹 Debug: Print orderId and positions info
         order_id = order_data.get("orderId") or order_data.get("OrderId") or "<no id>"
-        # print(f"Order {str(order_id)} has {len(positions)} positions:")
+        print(f"Order {str(order_id)} has {len(positions)} positions:")
         for i, p in enumerate(positions, start=1):
             amount = p.get("amount", "<no amount>")
             status = p.get("status", "<no status>")

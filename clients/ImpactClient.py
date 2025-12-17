@@ -1,5 +1,8 @@
-import datetime
+from datetime import datetime, date, time, timezone
+
 import os
+from zoneinfo import ZoneInfo
+import pytz
 
 import requests
 from requests.auth import HTTPBasicAuth
@@ -26,24 +29,107 @@ class ImpactClient:
         self.username = self.config.get(account_SID)
         self.password = self.config.get(token)
 
+    countries = {
+        "Germany": "Europe/Berlin",
+        "France": "Europe/Paris",
+        "UK": "Europe/London",
+        "USA": "America/New_York"
+    }
+
+    def local_to_utc_from_campaign(self,campaign_id, local_start_str, local_end_str):
+        """
+        local_start_str, local_end_str: strings in "YYYY-MM-DD" format
+        """
+        MARKET_TIMEZONES = {
+            "DE": "Europe/Berlin",
+            "FR": "Europe/Paris",
+            "UK": "Europe/London",
+            "DK": "Europe/Copenhagen",
+            "NO": "Europe/Oslo",
+            "BE": "Europe/Brussels",
+            "NL": "Europe/Amsterdam",
+            "SE": "Europe/Stockholm",
+            "IT": "Europe/Rome",
+            "ES": "Europe/Madrid",
+            "PL": "Europe/Warsaw"
+        }
+        # Parse strings to date objects
+        local_start = datetime.strptime(local_start_str, "%Y-%m-%d").date()
+        local_end = datetime.strptime(local_end_str, "%Y-%m-%d").date()
+
+        market_code = COUNTRY_CODES_AND_CAMPAIGNS.get(campaign_id)
+        if market_code is None:
+            raise ValueError(f"Unknown campaign ID: {campaign_id}")
+
+        tz_name = MARKET_TIMEZONES.get(market_code)
+        if tz_name is None:
+            raise ValueError(f"No timezone found for market code: {market_code}")
+
+        tz = ZoneInfo(tz_name)
+
+        # Combine date + time, pass tzinfo directly
+        start_local = datetime.combine(local_start, time.min, tzinfo=tz)
+        end_local = datetime.combine(local_end, time.max, tzinfo=tz)
+
+        # Convert to UTC
+        start_utc = start_local.astimezone(ZoneInfo("UTC"))
+        end_utc = end_local.astimezone(ZoneInfo("UTC"))
+
+        return start_utc.isoformat(), end_utc.isoformat()
+
+        market_code = constants.Constants.COUNTRY_CODES_AND_CAMPAIGNS.get(campaign_id)
+        if market_code is None:
+            raise ValueError(f"Unknown campaign ID: {campaign_id}")
+
+        tz_name = MARKET_TIMEZONES.get(market_code)
+        if tz_name is None:
+            raise ValueError(f"No timezone found for market code: {market_code}")
+
+        tz = ZoneInfo(tz_name)
+
+        start_local = datetime.combine(local_start, time.min, tzinfo=tz)
+        end_local = datetime.combine(local_end, time.max, tzinfo=tz)
+
+        # Convert to UTC
+        start_utc = start_local.astimezone(ZoneInfo("UTC"))
+        end_utc = end_local.astimezone(ZoneInfo("UTC"))
+
+        return start_utc.isoformat(), end_utc.isoformat()
+
+    from datetime import datetime
+
+    def to_impact_datetime_utc(self,value):
+        """
+        Accepts datetime or ISO string
+        Returns Impact-compatible UTC timestamp string with Z
+        """
+        if isinstance(value, str):
+            value = datetime.fromisoformat(value)
+
+        # # Ensure UTC
+        # if value.tzinfo is None:
+        #     from datetime import timezone
+        #     value = value.replace(tzinfo=timezone.utc)
+        # else:
+        #     value = value.astimezone(timezone.utc)
+
+        # Format without microseconds, add Z
+        return value.replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
     def get_actions(self,campaign_id, start_date, end_date, page_size=1000, page_number=1):
-        print(self.username)
-        print(BASE_URL)
+        start_utc, end_utc = self.local_to_utc_from_campaign(campaign_id, start_date, end_date)
+        print(start_utc, end_utc)
+
         url=BASE_URL+self.username+"/Actions?"
-        if isinstance(end_date, str):
-            end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d")
-        if isinstance(start_date, str):
-            start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d")
-        end_date_str = end_date.strftime("%Y-%m-%d")
-        start_date_str = start_date.strftime("%Y-%m-%d")
-        end_date_str=common_utils.format_date(end_date_str)
-        start_date_str=common_utils.format_date(start_date_str)
+
+        start_param = self.to_impact_datetime_utc(start_utc)
+        end_param = self.to_impact_datetime_utc(end_utc)
+
+        print(start_param, end_param)
         params = {
-            "ActionDateStart": start_date_str,
-            "ActionDateEnd": end_date_str,
-            "ActionStatus": "APPROVED,PENDING,TRACKING",
+            "ActionDateStart": start_param,
+            "ActionDateEnd": end_param,
             "PageSize":page_size,
             "PageNumber":page_number,
             "CampaignId":campaign_id
@@ -58,6 +144,7 @@ class ImpactClient:
                     headers={"Accept": "application/json"},
                     params=params
                 )
+                print(f"url: {url}")
                 if response.status_code != 200:
                     logger.error(f"Error {response.status_code}: {response.text}")
                     raise ValueError(f"Error {response.status_code}: {response.text}")
@@ -94,7 +181,7 @@ class ImpactClient:
                 auth=HTTPBasicAuth(self.username, self.password),
                 headers={"Accept": "application/json"}
             )
-            if response.status_code != 200:
+            if response.status_code not in (200, 201):
                 logger.error(f"Error {response.status_code}: {response.text}")
                 logger.error(
                     f"Failed to retrieve action {action_id} "
@@ -109,7 +196,7 @@ class ImpactClient:
             return None
 
     def update_action(self,action_id,amount,reason):
-        url=BASE_URL+self.username+"/Actions/"+action_id
+        url=BASE_URL+self.username+"/Actions"
         logger.info(f"Retrieving action {action_id}")
         body={
             "ActionId":action_id,
@@ -117,6 +204,7 @@ class ImpactClient:
             "Reason":reason
 
         }
+        print(f"update action body: {action_id}, {body}")
         try:
             response = requests.put(
                 url,
@@ -124,11 +212,15 @@ class ImpactClient:
                 headers = {"Accept": "application/json"},
                 data = body
             )
-            if response.status_code != 200:
+            print(f"update code response {response}")
+            if response.status_code not in (200, 201):
                 logger.error(f"Error {response.status_code}: {response.text}")
                 return None
 
-            return response.json()
+            data = response.json()
+            logger.info(f"Update response: {data}")
+
+            return data
 
         except requests.RequestException as e:
             logger.error(f"Error updating action {action_id}: {e}")
@@ -150,11 +242,14 @@ class ImpactClient:
                 headers={"Accept": "application/json"},
                 data=body
             )
-            if response.status_code != 200:
+            if response.status_code not in (200, 201):
                 logger.error(f"Error {response.status_code}: {response.text}")
                 return None
 
-            return response.json()
+            data = response.json()
+            logger.info(f"Update response: {data}")
+
+            return data
 
         except requests.RequestException as e:
             logger.error(f"Error updating action {action_id}: {e}")
