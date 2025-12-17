@@ -136,12 +136,16 @@ class common_utils:
         writer.writerows(rows)
 
         filename = f"{market}_{target_state}_results.csv"
-        output_dir = os.path.join(os.getcwd(), "output")
-        os.makedirs(output_dir, exist_ok=True)
-        file_path = os.path.join(output_dir, filename)
+        tmp_dir = "/tmp"
+        file_path = os.path.join(tmp_dir, filename)
+        # output_dir = os.path.join(os.getcwd(), "output")
+        # os.makedirs(output_dir, exist_ok=True)
+        # file_path = os.path.join(output_dir, filename)
 
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(output.getvalue())
+
+        print(f"Created CSV: {file_path}")
 
         return file_path
 

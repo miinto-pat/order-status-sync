@@ -9,3 +9,4 @@ protobuf~=6.33.0
 pytest~=8.4.2
 gunicorn
 pytz
+google-cloud-storage>=2.0.0

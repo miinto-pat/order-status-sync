@@ -315,7 +315,19 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
     }
 });
     document.getElementById("downloadZipBtn").addEventListener("click", () => {
-    window.location.href = "{{ url_for('bp.download_zip') }}";
+    fetch("/get-zip-url")
+        .then(resp => resp.json())
+        .then(data => {
+            if (data.url) {
+                window.location.href = data.url;
+            } else {
+                alert("ZIP not ready yet!");
+            }
+        })
+        .catch(err => {
+            console.error("Error fetching ZIP URL:", err);
+            alert("Failed to get ZIP URL. Check console for details.");
+        });
 });
 
 </script>
