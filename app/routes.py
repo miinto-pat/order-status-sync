@@ -25,7 +25,7 @@ def load_config_from_secret(secret_name: str = "impact_secret_json"):
         Falls back to DEFAULT_USER if unavailable.
         """
     project_id = "373688639022"
-    secret_path = f"projects/{project_id}/secrets/{secret_name}/versions/latest"
+    secret_path = f"projects/{project_id}/secrets/{secret_name}/versions/6"
 
     try:
         client = secretmanager.SecretManagerServiceClient()
