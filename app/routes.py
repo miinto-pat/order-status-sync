@@ -117,7 +117,11 @@ def get_zip_url():
     bucket = client.bucket(bucket_name)
     blob = bucket.blob(blob_name)
 
-    url = blob.generate_signed_url(expiration=3600)  # 1 hour
+    url = blob.generate_signed_url(
+        expiration=3600,
+        version="v4",
+        response_disposition=f'attachment; filename="{blob_name}"'
+    )
     return jsonify({"url": url})
 
 
