@@ -138,37 +138,38 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
     document.getElementById("downloadZipBtn").classList.add("d-none");
 
     const existingTable = document.getElementById("liveResultsTable");
-    if (existingTable) {
-        document.getElementById("marketRows").innerHTML = "";
-    }
+
 
 
     if (window.botInterval) clearInterval(window.botInterval);
 
     // Initialize table if not exists
-    statsDiv.innerHTML = `
-    <table id="liveResultsTable" class="table table-sm table-bordered">
-        <thead>
-            <tr>
-                <th>Market</th>
-                <th>Total</th>
-                <th>VOUCHER/Rejections</th>
-                <th>FULLY_RETURNED</th>
-                <th>ORDER_UPDATE</th>
-                <th>Not Modified</th>
-                <th>Not Processed</th>
-                <th>Error</th>
-            </tr>
-        </thead>
-        <tbody id="marketRows"></tbody>
-    </table>
+if (!document.getElementById("liveResultsTable")) {
 
-    <div id="errorSummary" class="mt-3"></div>
+        statsDiv.innerHTML = `
+        <table id="liveResultsTable" class="table table-sm table-bordered">
+            <thead>
+                <tr>
+                    <th>Market</th>
+                    <th>Total</th>
+                    <th>VOUCHER/Rejections</th>
+                    <th>FULLY_RETURNED</th>
+                    <th>ORDER_UPDATE</th>
+                    <th>Not Modified</th>
+                    <th>Not Processed</th>
+                    <th>Error</th>
+                </tr>
+            </thead>
+            <tbody id="marketRows"></tbody>
+        </table>
 
-    <button id="downloadZipBtn" class="btn btn-primary mt-3 d-none">
-        ⬇️ Download all results
-    </button>
-`;
+        <div id="errorSummary" class="mt-3"></div>
+
+        <button id="downloadZipBtn" class="btn btn-primary mt-3 d-none">
+            ⬇️ Download all results
+        </button>
+    `;
+}
 
 
     // Start bot
