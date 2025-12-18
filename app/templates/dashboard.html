@@ -74,6 +74,18 @@
 <script>
     let processedMarkets = new Set();
 
+    document.querySelectorAll("input[name='markets']").forEach(cb => {
+    cb.addEventListener("change", () => {
+        const market = cb.value;
+        if (!cb.checked) {
+            // Remove from processedMarkets so it can be re-run later
+            processedMarkets.delete(market);
+            // Remove its row from the table
+            const row = document.querySelector(`#marketRows tr[data-market="${market}"]`);
+            if (row) row.remove();
+        }
+    })
+
 document.getElementById("runBotForm").addEventListener("submit", function(e) {
     e.preventDefault();
 
@@ -139,7 +151,9 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
 
     if (window.botInterval) clearInterval(window.botInterval);
 
+    let table = document.getElementById("liveResultsTable");
     // Initialize table if not exists
+    if (!table) {
     statsDiv.innerHTML = `
     <table id="liveResultsTable" class="table table-sm table-bordered">
         <thead>
@@ -163,6 +177,7 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
         ⬇️ Download all results
     </button>
 `;
+}
 
 
     // Start bot
@@ -203,29 +218,30 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
                     const tbody = document.getElementById("marketRows");
 
                     if (status.market_stats) {
-                        for (const [market, s] of Object.entries(status.market_stats)) {
-                            let row = tbody.querySelector(`tr[data-market="${market}"]`);
-                            if (!row) {
-                                row = document.createElement("tr");
-                                row.setAttribute("data-market", market);
-                                tbody.appendChild(row);
-                            }
+    const tbody = document.getElementById("marketRows");
+    for (const [market, s] of Object.entries(status.market_stats)) {
+        let row = tbody.querySelector(`tr[data-market="${market}"]`);
+        if (!row) {
+            row = document.createElement("tr");
+            row.setAttribute("data-market", market);
+            tbody.appendChild(row);
+        }
+        const isProcessing = status.message.includes(market) && !s.error;
+        row.className = isProcessing ? "table-warning" : "";
 
-                            const isProcessing = status.message.includes(market) && !s.error;
-                            row.className = isProcessing ? "table-warning" : "";
+        row.innerHTML = `
+            <td>${market}${isProcessing ? " ⏳ Processing..." : ""}</td>
+            <td>${s.total_actions ?? 0}</td>
+            <td>${s.OTHER ?? 0}</td>
+            <td>${s.ITEM_RETURNED ?? 0}</td>
+            <td>${s.ORDER_UPDATE ?? 0}</td>
+            <td>${s.Not_Modified ?? 0}</td>
+            <td>${s.Not_Processed ?? 0}</td>
+            <td>${s.error ?? ""}</td>
+        `;
+    }
+}
 
-                            row.innerHTML = `
-                                <td>${market}${isProcessing ? " ⏳ Processing..." : ""}</td>
-                                <td>${s.total_actions ?? 0}</td>
-                                <td>${s.OTHER ?? 0}</td>
-                                <td>${s.ITEM_RETURNED ?? 0}</td>
-                                <td>${s.ORDER_UPDATE ?? 0}</td>
-                                <td>${s.Not_Modified ?? 0}</td>
-                                <td>${s.Not_Processed ?? 0}</td>
-                                <td>${s.error ?? ""}</td>
-                            `;
-                        }
-                    }
 
                     // Show download button if ZIP ready
                     if (status.status === "finished" && status.zip_blob_name) {
