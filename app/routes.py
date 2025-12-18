@@ -115,6 +115,8 @@ def get_zip_url():
     client = storage.Client()
     bucket_name = "impact-bot-temp-files"
     bucket = client.bucket(bucket_name)
+    for blob in bucket.list_blobs():
+        print(blob.name)
     blob = bucket.blob(blob_name)
 
     url = blob.generate_signed_url(
