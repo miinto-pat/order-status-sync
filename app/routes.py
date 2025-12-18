@@ -8,6 +8,7 @@ import zipfile
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file
 from flask_login import login_required, login_user, logout_user, current_user, UserMixin
 
+import utils
 from constants.Constants import COUNTRY_CODES_AND_CAMPAIGNS
 from main import main, logger
 from utils import CommonUtils
@@ -107,19 +108,16 @@ from google.cloud import storage
 
 @bp.route("/get-zip-url")
 def get_zip_url():
-    zip_path = bot_status.get("zip_path")
-    if not zip_path or not os.path.exists(zip_path):
+    blob_name = bot_status.get("zip_blob_name")
+    if not blob_name:
         return jsonify({"error": "ZIP not ready"}), 404
 
     client = storage.Client()
     bucket_name = "impact-bot-temp-files"
     bucket = client.bucket(bucket_name)
-    blob_name = os.path.basename(zip_path)
     blob = bucket.blob(blob_name)
 
-    blob.upload_from_filename(zip_path)
-
-    url = blob.generate_signed_url(expiration=3600)
+    url = blob.generate_signed_url(expiration=3600)  # 1 hour
     return jsonify({"url": url})
 
 
@@ -217,8 +215,11 @@ def run_bot_thread(start_date=None, end_date=None, markets=None):
                             arcname=os.path.basename(csv_path)
                         )
 
-            bot_status["zip_path"] = zip_path
-            print(f"zip path: {zip_path}")
+            # bot_status["zip_path"] = zip_path
+            # print(f"zip path: {zip_path}")
+            blob_name = utils.CommonUtils.common_utils.upload_zip_to_gcs(zip_path)
+            bot_status["zip_blob_name"] = blob_name
+            bot_status["zip_path"] = None
 
         # ✅ If all markets processed (even if some failed)
         bot_status["status"] = "finished"

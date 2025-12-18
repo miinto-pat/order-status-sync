@@ -14,4 +14,5 @@ ENV PORT=8080
 EXPOSE 8080
 
 # Use Gunicorn for production
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "2", "--timeout", "300", "run:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers","--threads","4", "2", "--timeout", "300", "run:app"]
+

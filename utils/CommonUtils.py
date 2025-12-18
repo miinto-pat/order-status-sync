@@ -7,6 +7,8 @@ from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 from typing import Dict, Any
 
+from google.cloud import storage
+
 from constants.Constants import VAT
 
 
@@ -149,3 +151,13 @@ class common_utils:
 
         return file_path
 
+
+    # Upload ZIP to GCS
+    @staticmethod
+    def upload_zip_to_gcs(local_zip_path, bucket_name="impact-bot-temp-files"):
+        client = storage.Client()
+        bucket = client.bucket(bucket_name)
+        blob_name = os.path.basename(local_zip_path)
+        blob = bucket.blob(blob_name)
+        blob.upload_from_filename(local_zip_path)
+        return blob_name
