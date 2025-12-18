@@ -72,6 +72,8 @@
     {% endwith %}
 
 <script>
+    let processedMarkets = new Set();
+
 document.getElementById("runBotForm").addEventListener("submit", function(e) {
     e.preventDefault();
 
@@ -84,6 +86,13 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
 
     const selectedMarkets = Array.from(document.querySelectorAll("input[name='markets']:checked"))
                                  .map(cb => cb.value);
+
+    const newMarkets = selectedMarkets.filter(m => !processedMarkets.has(m));
+    if (newMarkets.length === 0) {
+        msgDiv.className = "alert alert-info mt-2";
+        msgDiv.innerText = "No new markets selected. Bot is idle.";
+        return;
+    }
 
     let missingFields = [];
     if (!startDate) missingFields.push("start date");
@@ -152,13 +161,16 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
     </button>
 `;
 
+    newMarkets.forEach(m => processedMarkets.add(m));
 
     // Start bot
     fetch("{{ url_for('bp.run_bot') }}", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ start_date: startDate, end_date: endDate, markets: selectedMarkets })
+        body: JSON.stringify({ start_date: startDate,
+         end_date: endDate,
+          markets: newMarkets })
     })
     .then(resp => resp.json())
     .then(data => {
