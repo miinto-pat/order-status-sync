@@ -237,9 +237,9 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
 });
 
 // Download button listener
-document.addEventListener("DOMContentLoaded", () => {
-    const downloadBtn = document.getElementById("downloadZipBtn");
-    downloadBtn.addEventListener("click", () => {
+// Event delegation for dynamically created download button
+document.getElementById("marketStats").addEventListener("click", (e) => {
+    if (e.target && e.target.id === "downloadZipBtn") {
         fetch("/get-zip-url")
             .then(resp => resp.json())
             .then(data => {
@@ -253,8 +253,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 console.error("Error fetching ZIP URL:", err);
                 alert("Failed to get ZIP URL.");
             });
-    });
+    }
 });
+
 </script>
 
 
