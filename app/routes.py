@@ -317,5 +317,5 @@ def bot_status_endpoint():
         "message": bot_status.get("message"),
         "market_stats": bot_status.get("market_stats"),
         "not_processed": bot_status.get("not_processed"),
-        "zip_path": bot_status.get("zip_path")  # add this
+        "zip_blob_name": bot_status.get("zip_blob_name")
     })
