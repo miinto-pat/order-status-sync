@@ -112,8 +112,13 @@ def get_zip_url():
     if not blob_name:
         return jsonify({"error": "ZIP not ready"}), 404
 
-    key_json = json.loads(os.environ["GCP_SA_KEY"])
-    client = storage.Client.from_service_account_info(key_json)
+    CONFIG = load_config_from_secret()
+    GCP_SERVICE_ACCOUNT = CONFIG.get("GCP_SERVICE_ACCOUNT", {})
+
+    if not GCP_SERVICE_ACCOUNT:
+        raise RuntimeError("GCP_SERVICE_ACCOUNT not found in Secret Manager config")
+
+    client = storage.Client.from_service_account_info(GCP_SERVICE_ACCOUNT)
     # client = storage.Client()
     bucket_name = "impact-bot-temp-files"
     bucket = client.bucket(bucket_name)
