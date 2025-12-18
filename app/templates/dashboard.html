@@ -145,9 +145,7 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
 
 
             <div id="errorSummary" class="mt-3"></div>
-            <button id="downloadZipBtn" class="btn btn-primary mt-3 d-none">
-        ⬇️ Download all results
-    </button>
+
 
         `;
     }
@@ -303,7 +301,7 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
                             status.status === "finished"
                                 ? "alert alert-success mt-2"
                                 : "alert alert-danger mt-2";
-                        if (status.status === "finished" && status.zip_path) {
+                        if (status.status === "finished" && status.zip_blob_name) {
         document.getElementById("downloadZipBtn").classList.remove("d-none");
     }
                     }
@@ -316,9 +314,27 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
         }, 1000);
     }
 });
-    document.getElementById("downloadZipBtn").addEventListener("click", () => {
-    window.location.href = "{{ url_for('bp.get-zip-url') }}";
+    document.addEventListener("DOMContentLoaded", () => {
+    const downloadBtn = document.getElementById("downloadZipBtn");
+    if (!downloadBtn) return;
+
+    downloadBtn.addEventListener("click", () => {
+        fetch("/get-zip-url")
+            .then(resp => resp.json())
+            .then(data => {
+                if (data.url) {
+                    window.location.href = data.url;
+                } else {
+                    alert("ZIP not ready yet!");
+                }
+            })
+            .catch(err => {
+                console.error("Error fetching ZIP URL:", err);
+                alert("Failed to get ZIP URL.");
+            });
+    });
 });
+
 
 </script>
 
