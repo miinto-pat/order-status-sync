@@ -250,23 +250,58 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
 
 // Download button listener
 // Event delegation for dynamically created download button
-document.getElementById("marketStats").addEventListener("click", (e) => {
-    if (e.target && e.target.id === "downloadZipBtn") {
-        fetch("/get-zip-url")
-            .then(resp => resp.json())
-            .then(data => {
-                if (data.url) {
-                    window.location.href = data.url;
-                } else {
-                    alert("ZIP not ready yet!");
-                }
-            })
-            .catch(err => {
-                console.error("Error fetching ZIP URL:", err);
-                alert("Failed to get ZIP URL.");
-            });
+let processedMarkets = new Set();
+
+document.getElementById("runBotForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    const btn = document.getElementById("runBotBtn");
+    const msgDiv = document.getElementById("progressMessage");
+    const statsDiv = document.getElementById("marketStats");
+
+    const startDate = document.getElementById("startDate").value;
+    const endDate = document.getElementById("endDate").value;
+
+    const selectedMarkets = Array.from(document.querySelectorAll("input[name='markets']:checked"))
+                                 .map(cb => cb.value);
+
+    const newMarkets = selectedMarkets.filter(m => !processedMarkets.has(m));
+    if (newMarkets.length === 0) {
+        msgDiv.className = "alert alert-info mt-2";
+        msgDiv.innerText = "No new markets selected. Bot is idle.";
+        return;
     }
+
+    // validations and other code...
+
+    newMarkets.forEach(m => processedMarkets.add(m));
+
+    fetch("{{ url_for('bp.run_bot') }}", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ start_date: startDate, end_date: endDate, markets: newMarkets })
+    })
+    .then(resp => resp.json())
+    .then(data => {
+        if (data.status === "error") {
+            msgDiv.className = "alert alert-danger mt-2";
+            msgDiv.innerText = data.message || "Error while retrieving actions";
+            btn.disabled = false;
+            return;
+        }
+
+        msgDiv.innerText = data.message;
+        window.botInterval = startPolling();
+    })
+    .catch(err => {
+        msgDiv.className = "alert alert-danger mt-2";
+        msgDiv.innerText = err.message || "Error starting bot.";
+        btn.disabled = false;
+        console.error(err);
+    });
 });
+
 
 </script>
 
