@@ -72,6 +72,7 @@
     {% endwith %}
 
 <script>
+
 document.getElementById("runBotForm").addEventListener("submit", function(e) {
     e.preventDefault();
 
@@ -85,6 +86,20 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
     const selectedMarkets = Array.from(document.querySelectorAll("input[name='markets']:checked"))
                                  .map(cb => cb.value);
 
+    const alreadyPublishedMarkets = Array.from(document.querySelectorAll("#marketRows tr"))
+                                         .map(row => row.getAttribute("data-market"));
+
+    const marketsToRun = selectedMarkets.filter(campaignId => {
+        const marketCode = CAMPAIGN_TO_MARKET[campaignId]; // Map campaign ID → code
+        return !alreadyPublishedMarkets.includes(marketCode);
+    });
+
+    if (marketsToRun.length === 0) {
+        msgDiv.className = "alert alert-info mt-2";
+        msgDiv.innerText = "All selected markets have already been processed.";
+        btn.disabled = false;
+        return;
+    }
     let missingFields = [];
     if (!startDate) missingFields.push("start date");
     if (!endDate) missingFields.push("end date");
@@ -158,7 +173,8 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ start_date: startDate, end_date: endDate, markets: selectedMarkets })
+        body: JSON.stringify({ start_date: startDate, end_date: endDate, markets: marketsToRun })
+
     })
     .then(resp => resp.json())
     .then(data => {
