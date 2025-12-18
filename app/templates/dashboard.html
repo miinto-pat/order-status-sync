@@ -184,7 +184,12 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
             fetch("{{ url_for('bp.bot_status_endpoint') }}")
                 .then(resp => resp.json())
                 .then(status => {
-                    msgDiv.innerText = status.message || "Running...";
+                    if (status.status === "running" && status.message === "Idle") {
+                        // ignore idle while running
+                    } else if (msgDiv.innerText !== status.message) {
+                        msgDiv.innerText = status.message || "Running...";
+}
+
 
                     const tbody = document.getElementById("marketRows");
 
@@ -237,9 +242,8 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
 });
 
 // Download button listener
-document.addEventListener("DOMContentLoaded", () => {
-    const downloadBtn = document.getElementById("downloadZipBtn");
-    downloadBtn.addEventListener("click", () => {
+document.addEventListener("click", function (e) {
+    if (e.target && e.target.id === "downloadZipBtn") {
         fetch("/get-zip-url")
             .then(resp => resp.json())
             .then(data => {
@@ -253,8 +257,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 console.error("Error fetching ZIP URL:", err);
                 alert("Failed to get ZIP URL.");
             });
-    });
+    }
 });
+
 </script>
 
 
