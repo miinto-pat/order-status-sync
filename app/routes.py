@@ -17,6 +17,8 @@ from google.cloud import secretmanager
 from flask import current_app
 
 bp = Blueprint('bp', __name__)
+from threading import Lock
+bot_status_lock = Lock()
 
 
 def load_config_from_secret(secret_name: str = "impact_secret_json"):
@@ -25,7 +27,7 @@ def load_config_from_secret(secret_name: str = "impact_secret_json"):
         Falls back to DEFAULT_USER if unavailable.
         """
     project_id = "373688639022"
-    secret_path = f"projects/{project_id}/secrets/{secret_name}/versions/6"
+    secret_path = f"projects/{project_id}/secrets/{secret_name}/versions/latest"
 
     try:
         client = secretmanager.SecretManagerServiceClient()
@@ -75,32 +77,6 @@ bot_status = {"running": False,
               }
 
 
-@bp.route("/download-csv")
-def download_csv():
-    csv_path = current_app.config.get("LAST_CSV_PATH")
-    if not csv_path or not os.path.exists(csv_path):
-        return {"error": "CSV not found"}, 404
-
-    return send_file(
-        csv_path,
-        as_attachment=True,
-        download_name=os.path.basename(csv_path),
-        mimetype="text/csv"
-    )
-
-
-@bp.route("/download-zip")
-def download_zip():
-    zip_path = bot_status.get("zip_path")
-    if not zip_path or not os.path.exists(zip_path):
-        return {"error": "ZIP not found"}, 404
-
-    return send_file(
-        zip_path,
-        as_attachment=True,
-        download_name="impact_results.zip",
-        mimetype="application/zip"
-    )
 
 
 from google.cloud import storage
@@ -137,13 +113,14 @@ def get_zip_url():
 def run_bot_thread(start_date=None, end_date=None, markets=None):
     global bot_status
 
-    bot_status.update({
-        "running": True,
-        "message": "Bot started...",
-        "status": "started",
-        "market_stats": {},
-        "not_processed": [],
-        "actions_by_state": {},
+    with bot_status_lock:
+        bot_status.update({
+            "running": True,
+            "message": "Bot started...",
+            "status": "running",
+            "market_stats": {},
+            "not_processed": [],
+            "actions_by_state": {},
     })
 
     try:
@@ -160,7 +137,9 @@ def run_bot_thread(start_date=None, end_date=None, markets=None):
 
         for campaign_id in campaign_ids:
             market = COUNTRY_CODES_AND_CAMPAIGNS.get(campaign_id, f"Unknown-{campaign_id}")
-            bot_status["message"] = f"Processing market: {market}..."
+
+            with bot_status_lock:
+                bot_status["message"] = f"Processing market: {market}..."
 
             try:
                 # ✅ Process one market
@@ -177,40 +156,43 @@ def run_bot_thread(start_date=None, end_date=None, markets=None):
                                                                                     allowed_states_not_processed,
                                                                                     "not_processed")
 
-                bot_status.setdefault("csv_paths", {})
-                bot_status["csv_paths"][f"{market}_processed"] = processed_csv_path
-                bot_status["csv_paths"][f"{market}_not_processed"] = not_processed_csv_path
+                with bot_status_lock:
+                    bot_status.setdefault("csv_paths", {})
+                    bot_status["csv_paths"][f"{market}_processed"] = processed_csv_path
+                    bot_status["csv_paths"][f"{market}_not_processed"] = not_processed_csv_path
 
-                # ✅ Save results
-                bot_status["market_stats"][market] = {
-                    k: (v if v is not None else 0) for k, v in stats.items()
-                }
-                not_processed_all.extend(not_processed)
-                bot_status["not_processed"] = not_processed_all
-                bot_status["message"] = f"✅ Finished market: {market}"
+                    # ✅ Save results
+                    bot_status["market_stats"][market] = {
+                        k: (v if v is not None else 0) for k, v in stats.items()
+                    }
+                    not_processed_all.extend(not_processed)
+                    bot_status["not_processed"] = not_processed_all
+                    bot_status["message"] = f"✅ Finished market: {market}"
 
             except Exception as e:
                 # ⚠️ Handle market-level error but continue
                 logger.exception(f"Error while processing market {market}: {e}")
 
-                bot_status["market_stats"][market] = {
-                    "total_actions": 0,
-                    "OTHER": 0,
-                    "ITEM_RETURNED": 0,
-                    "ORDER_UPDATE": 0,
-                    "Not_Processed": 0,
-                    "error": str(e),
-                }
+                with bot_status_lock:
+                    bot_status["market_stats"][market] = {
+                        "total_actions": 0,
+                        "OTHER": 0,
+                        "ITEM_RETURNED": 0,
+                        "ORDER_UPDATE": 0,
+                        "Not_Processed": 0,
+                        "error": str(e),
+                    }
 
-                not_processed_all.append({
-                    "market": market,
-                    "action_id": "N/A",
-                    "error": str(e),
-                })
-                bot_status["actions_by_state"][market] = {}
+                    not_processed_all.append({
+                        "market": market,
+                        "action_id": "N/A",
+                        "error": str(e),
+                    })
+                    bot_status["actions_by_state"][market] = {}
 
-                bot_status["not_processed"] = not_processed_all
-                bot_status["message"] = f"⚠️ Failed market: {market}, continuing..."
+                    bot_status["not_processed"] = not_processed_all
+                    bot_status["message"] = f"⚠️ Failed market: {market}, continuing..."
+
                 continue
 
         csv_paths = bot_status.get("csv_paths", {})
@@ -231,13 +213,16 @@ def run_bot_thread(start_date=None, end_date=None, markets=None):
             # bot_status["zip_path"] = zip_path
             # print(f"zip path: {zip_path}")
             blob_name = utils.CommonUtils.common_utils.upload_zip_to_gcs(zip_path)
-            bot_status["zip_blob_name"] = blob_name
-            bot_status["zip_path"] = None
+
+            with bot_status_lock:
+                bot_status["zip_blob_name"] = blob_name
+                bot_status["zip_path"] = None
 
         # ✅ If all markets processed (even if some failed)
-        bot_status["status"] = "finished"
-        bot_status["message"] = f"✅ Bot finished. {len(campaign_ids)} market(s) processed."
-        bot_status["running"] = False
+        with bot_status_lock:
+            bot_status["status"] = "finished"
+            bot_status["message"] = f"✅ Bot finished. {len(campaign_ids)} market(s) processed."
+            bot_status["running"] = False
 
 
     except Exception as e:
@@ -250,12 +235,13 @@ def run_bot_thread(start_date=None, end_date=None, markets=None):
             msg = "Error while retrieving actions — request timed out."
         elif "unauthorized" in msg.lower():
             msg = "Error while retrieving actions — invalid credentials."
-        bot_status.update({
-            "message": msg,
-            "status": "error",
-            "market_stats": {},
-            "not_processed": [],
-        })
+        with bot_status_lock:
+            bot_status.update({
+                "message": msg,
+                "status": "error",
+                "market_stats": {},
+                "not_processed": [],
+            })
 
     finally:
         pass
@@ -307,13 +293,26 @@ def run_bot():
         if not markets:
             return jsonify({"status": "error", "message": "No markets selected"}), 400
 
-        if not bot_status["running"]:
-            thread = threading.Thread(target=run_bot_thread, args=(start_date, end_date, markets))
-            thread.start()
-            return jsonify(
-                {"message": f"Running bot for markets: {markets} from {start_date} to {end_date}", "status": "started"})
-        else:
-            return jsonify({"message": "Bot is already running", "status": "running"})
+        with bot_status_lock:
+            if bot_status.get("running"):
+                return jsonify({"message": "Bot is already running", "status": "running"})
+
+            bot_status.update({
+                "running": True,
+                "status": "running",
+                "message": "Starting bot..."
+            })
+        thread = threading.Thread(
+            target=run_bot_thread,
+            args=(start_date, end_date, markets),
+            daemon=True
+        )
+        thread.start()
+
+        return jsonify({
+            "message": f"Running bot for markets: {markets}",
+            "status": "started"
+        })
 
     except Exception as e:
         tb = traceback.format_exc()
@@ -324,11 +323,11 @@ def run_bot():
 @bp.route("/bot-status")
 @login_required
 def bot_status_endpoint():
-    # return jsonify(bot_status)
-    return jsonify({
-        "status": bot_status.get("status"),
-        "message": bot_status.get("message"),
-        "market_stats": bot_status.get("market_stats"),
-        "not_processed": bot_status.get("not_processed"),
-        "zip_blob_name": bot_status.get("zip_blob_name")
-    })
+    with bot_status_lock:
+        return jsonify({
+            "status": bot_status.get("status"),
+            "message": bot_status.get("message"),
+            "market_stats": bot_status.get("market_stats"),
+            "not_processed": bot_status.get("not_processed"),
+            "zip_blob_name": bot_status.get("zip_blob_name")
+        })
