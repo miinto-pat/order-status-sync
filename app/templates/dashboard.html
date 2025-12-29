@@ -75,7 +75,6 @@
 </script>
 
 <script>
-
 document.getElementById("runBotForm").addEventListener("submit", function(e) {
     e.preventDefault();
 
@@ -87,66 +86,9 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
     const endDate = document.getElementById("endDate").value;
 
     const selectedMarkets = Array.from(document.querySelectorAll("input[name='markets']:checked"))
-                             .map(cb => cb.value);
+                                .map(cb => cb.value);
 
-    const existingTable = document.getElementById("liveResultsTable");
-   // Initialize table if not exists
-if (!document.getElementById("liveResultsTable")) {
-    statsDiv.innerHTML = `
-        <table id="liveResultsTable" class="table table-sm table-bordered">
-            <thead>
-                <tr>
-                    <th>Market</th>
-                    <th>Total</th>
-                    <th>VOUCHER/Rejections</th>
-                    <th>FULLY_RETURNED</th>
-                    <th>ORDER_UPDATE</th>
-                    <th>Not Modified</th>
-                    <th>Not Processed</th>
-                    <th>Error</th>
-                </tr>
-            </thead>
-            <tbody id="marketRows"></tbody>
-        </table>
-        <div id="errorSummary" class="mt-3"></div>
-        <button id="downloadZipBtn" class="btn btn-primary mt-3 d-none">
-            ⬇️ Download all results
-        </button>
-    `;
-}
-
-    const tbody = document.getElementById("marketRows");
-    // Map selected checkboxes to market names
-    const selectedMarketNames = selectedMarkets.map(id => CAMPAIGN_TO_MARKET[id]);
-
-    let marketsToRun = [];
-    let clearTable = false;
-
-    if (selectedMarketNames.length === 0) {
-        msgDiv.className = "alert alert-danger mt-2";
-        msgDiv.innerText = "Please select at least one market.";
-        btn.disabled = false;
-        return;
-    }
-
-    // Check if any old market is selected
-    const hasOverlap = selectedMarketNames.some(m => oldMarkets.includes(m));
-
-    if (!hasOverlap) {
-        // Completely new selection, clear table
-        tbody.innerHTML = "";
-        marketsToRun = selectedMarketNames;
-    } else {
-        // Some overlap – only run newly selected markets not already in table
-        marketsToRun = selectedMarketNames.filter(m => !oldMarkets.includes(m));
-    }
-
-    if (marketsToRun.length === 0) {
-        msgDiv.className = "alert alert-info mt-2";
-        msgDiv.innerText = "All selected markets have already been processed.";
-        btn.disabled = false;
-        return;
-    }
+    // Validate inputs
     let missingFields = [];
     if (!startDate) missingFields.push("start date");
     if (!endDate) missingFields.push("end date");
@@ -174,19 +116,8 @@ if (!document.getElementById("liveResultsTable")) {
         return;
     }
 
-    // Reset UI
-    msgDiv.className = "alert alert-info mt-2";
-    msgDiv.innerText = "Starting bot...";
-    btn.disabled = true;
-
-    document.getElementById("downloadZipBtn").classList.add("d-none");
-
-    if (window.botInterval) clearInterval(window.botInterval);
-
     // Initialize table if not exists
-
     if (!document.getElementById("liveResultsTable")) {
-
         statsDiv.innerHTML = `
         <table id="liveResultsTable" class="table table-sm table-bordered">
             <thead>
@@ -203,22 +134,51 @@ if (!document.getElementById("liveResultsTable")) {
             </thead>
             <tbody id="marketRows"></tbody>
         </table>
-
         <div id="errorSummary" class="mt-3"></div>
+        <button id="downloadZipBtn" class="btn btn-primary mt-3 d-none">⬇️ Download all results</button>
+        `;
+    }
 
-        <button id="downloadZipBtn" class="btn btn-primary mt-3 d-none">
-            ⬇️ Download all results
-        </button>
-    `;
-}
+    const tbody = document.getElementById("marketRows");
+    const oldMarkets = Array.from(tbody.querySelectorAll("tr"))
+                            .map(row => row.getAttribute("data-market"));
 
+    // Map selected checkboxes to market names
+    const selectedMarketNames = selectedMarkets.map(id => CAMPAIGN_TO_MARKET[id]);
+
+    let marketsToRun = [];
+    const hasOverlap = selectedMarketNames.some(m => oldMarkets.includes(m));
+
+    if (!hasOverlap) {
+        // Completely new selection, clear table
+        tbody.innerHTML = "";
+        marketsToRun = selectedMarketNames;
+    } else {
+        // Some overlap – only run newly selected markets not already in table
+        marketsToRun = selectedMarketNames.filter(m => !oldMarkets.includes(m));
+    }
+
+    if (marketsToRun.length === 0) {
+        msgDiv.className = "alert alert-info mt-2";
+        msgDiv.innerText = "All selected markets have already been processed.";
+        btn.disabled = false;
+        return;
+    }
+
+    // Reset UI
+    msgDiv.className = "alert alert-info mt-2";
+    msgDiv.innerText = "Starting bot...";
+    btn.disabled = true;
+    document.getElementById("downloadZipBtn").classList.add("d-none");
+
+    if (window.botInterval) clearInterval(window.botInterval);
 
     // Start bot
-   fetch("{{ url_for('bp.run_bot') }}", {
-    method: "POST",
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ start_date: startDate, end_date: endDate, markets: marketsToRun })
+    fetch("{{ url_for('bp.run_bot') }}", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ start_date: startDate, end_date: endDate, markets: marketsToRun })
     })
     .then(resp => resp.json())
     .then(data => {
@@ -229,7 +189,7 @@ if (!document.getElementById("liveResultsTable")) {
             return;
         }
 
-        msgDiv.innerText = data.message;
+        msgDiv.innerText = data.message || "Bot started...";
         window.botInterval = startPolling();
     })
     .catch(err => {
@@ -249,10 +209,7 @@ if (!document.getElementById("liveResultsTable")) {
                         msgDiv.innerText = status.message || "Processing...";
                     } else if (msgDiv.innerText !== status.message) {
                         msgDiv.innerText = status.message || "Running...";
-}
-
-
-                    const tbody = document.getElementById("marketRows");
+                    }
 
                     if (status.market_stats) {
                         for (const [market, s] of Object.entries(status.market_stats)) {
@@ -263,8 +220,7 @@ if (!document.getElementById("liveResultsTable")) {
                                 tbody.appendChild(row);
                             }
 
-                            const isProcessing = status.message.includes(market) && !s.error;
-
+                            const isProcessing = status.message && status.message.includes(market) && !s.error;
                             row.className = isProcessing ? "table-warning" : "";
 
                             row.innerHTML = `
@@ -280,7 +236,6 @@ if (!document.getElementById("liveResultsTable")) {
                         }
                     }
 
-                    // Show download button if ZIP ready
                     if (status.status === "finished" && status.zip_blob_name) {
                         document.getElementById("downloadZipBtn").classList.remove("d-none");
                         btn.disabled = false;
@@ -321,8 +276,8 @@ document.addEventListener("click", function (e) {
             });
     }
 });
-
 </script>
+
 
 
 
