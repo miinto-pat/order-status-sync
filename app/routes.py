@@ -122,6 +122,8 @@ def run_bot_thread(start_date=None, end_date=None, markets=None):
             "actions_by_state": {},
     })
 
+
+
     try:
         bot = main()
         data = common_utils.load_config()
@@ -292,6 +294,7 @@ def dashboard():
 @login_required
 def run_bot():
     global bot_status
+
     try:
         data = request.get_json()
         start_date = data.get("start_date")
@@ -302,13 +305,16 @@ def run_bot():
             return jsonify({"status": "error", "message": "No markets selected"}), 400
 
         with bot_status_lock:
-            if bot_status.get("running"):
-                return jsonify({"message": "Bot is already running", "status": "running"})
-
             bot_status.update({
                 "running": True,
                 "status": "running",
-                "message": "Starting bot..."
+                "message": "Starting bot...",
+                "market_stats": {},
+                "not_processed": [],
+                "actions_by_state": {},
+                "csv_paths": {},
+                "zip_blob_name": None,
+                "zip_path": None
             })
         thread = threading.Thread(
             target=run_bot_thread,

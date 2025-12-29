@@ -87,15 +87,49 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
     const endDate = document.getElementById("endDate").value;
 
     const selectedMarkets = Array.from(document.querySelectorAll("input[name='markets']:checked"))
-                                 .map(cb => cb.value);
+                             .map(cb => cb.value);
 
-    const alreadyPublishedMarkets = Array.from(document.querySelectorAll("#marketRows tr"))
-                                         .map(row => row.getAttribute("data-market"));
+    const existingTable = document.getElementById("liveResultsTable");
+   // Initialize table if not exists
+if (!document.getElementById("liveResultsTable")) {
+    statsDiv.innerHTML = `
+        <table id="liveResultsTable" class="table table-sm table-bordered">
+            <thead>
+                <tr>
+                    <th>Market</th>
+                    <th>Total</th>
+                    <th>VOUCHER/Rejections</th>
+                    <th>FULLY_RETURNED</th>
+                    <th>ORDER_UPDATE</th>
+                    <th>Not Modified</th>
+                    <th>Not Processed</th>
+                    <th>Error</th>
+                </tr>
+            </thead>
+            <tbody id="marketRows"></tbody>
+        </table>
+        <div id="errorSummary" class="mt-3"></div>
+        <button id="downloadZipBtn" class="btn btn-primary mt-3 d-none">
+            ⬇️ Download all results
+        </button>
+    `;
+}
 
-    const marketsToRun = selectedMarkets.filter(campaignId => {
-        const marketCode = CAMPAIGN_TO_MARKET[campaignId]; // Map campaign ID → code
-        return !alreadyPublishedMarkets.includes(marketCode);
-    });
+    const tbody = document.getElementById("marketRows");
+    const oldMarkets = Array.from(tbody.querySelectorAll("tr"))
+                            .map(row => row.getAttribute("data-market"));
+
+    // Determine markets to run
+    let marketsToRun;
+    if (oldMarkets.length > 0 && selectedMarkets.every(id => oldMarkets.includes(CAMPAIGN_TO_MARKET[id]))) {
+        // Keep old + new
+        marketsToRun = selectedMarkets.filter(id => !oldMarkets.includes(CAMPAIGN_TO_MARKET[id]));
+    } else {
+        // New selection, clear table
+        marketsToRun = selectedMarkets;
+        tbody.innerHTML = "";
+    }
+
 
     if (marketsToRun.length === 0) {
         msgDiv.className = "alert alert-info mt-2";
@@ -137,14 +171,11 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
 
     document.getElementById("downloadZipBtn").classList.add("d-none");
 
-    const existingTable = document.getElementById("liveResultsTable");
-
-
-
     if (window.botInterval) clearInterval(window.botInterval);
 
     // Initialize table if not exists
-if (!document.getElementById("liveResultsTable")) {
+
+    if (!document.getElementById("liveResultsTable")) {
 
         statsDiv.innerHTML = `
         <table id="liveResultsTable" class="table table-sm table-bordered">
@@ -173,12 +204,11 @@ if (!document.getElementById("liveResultsTable")) {
 
 
     // Start bot
-    fetch("{{ url_for('bp.run_bot') }}", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ start_date: startDate, end_date: endDate, markets: marketsToRun })
-
+   fetch("{{ url_for('bp.run_bot') }}", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ start_date: startDate, end_date: endDate, markets: marketsToRun })
     })
     .then(resp => resp.json())
     .then(data => {
@@ -223,8 +253,8 @@ if (!document.getElementById("liveResultsTable")) {
                                 tbody.appendChild(row);
                             }
 
-                            const isProcessing = status.status === "running"
-                                && status.current_market === market;
+                            const isProcessing = status.message.includes(market) && !s.error;
+
                             row.className = isProcessing ? "table-warning" : "";
 
                             row.innerHTML = `
