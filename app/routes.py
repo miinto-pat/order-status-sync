@@ -71,12 +71,11 @@ class User(UserMixin):
 bot_status = {"running": False,
               "message": "Idle",
               "status": "idle",
+              "current_market": None,
               "market_stats": {},
               "zip_path": None,
               "csv_paths": {}
               }
-
-
 
 
 from google.cloud import storage
@@ -139,7 +138,11 @@ def run_bot_thread(start_date=None, end_date=None, markets=None):
             market = COUNTRY_CODES_AND_CAMPAIGNS.get(campaign_id, f"Unknown-{campaign_id}")
 
             with bot_status_lock:
-                bot_status["message"] = f"Processing market: {market}..."
+                bot_status.update({
+                    "status": "running",
+                    "current_market": market,
+                    "message": f"Processing market: {market}..."
+                })
 
             try:
                 # ✅ Process one market
@@ -167,7 +170,8 @@ def run_bot_thread(start_date=None, end_date=None, markets=None):
                     }
                     not_processed_all.extend(not_processed)
                     bot_status["not_processed"] = not_processed_all
-                    bot_status["message"] = f"✅ Finished market: {market}"
+                    bot_status["message"] = f"Continuing to next market..."
+
 
             except Exception as e:
                 # ⚠️ Handle market-level error but continue
@@ -220,9 +224,12 @@ def run_bot_thread(start_date=None, end_date=None, markets=None):
 
         # ✅ If all markets processed (even if some failed)
         with bot_status_lock:
-            bot_status["status"] = "finished"
-            bot_status["message"] = f"✅ Bot finished. {len(campaign_ids)} market(s) processed."
-            bot_status["running"] = False
+            bot_status.update({
+                "status": "finished",
+                "running": False,
+                "current_market": None,
+                "message": f"✅ Bot finished. {len(campaign_ids)} market(s) processed."
+            })
 
 
     except Exception as e:
@@ -239,6 +246,7 @@ def run_bot_thread(start_date=None, end_date=None, markets=None):
             bot_status.update({
                 "message": msg,
                 "status": "error",
+                "current_market": None,
                 "market_stats": {},
                 "not_processed": [],
             })
@@ -327,6 +335,7 @@ def bot_status_endpoint():
         return jsonify({
             "status": bot_status.get("status"),
             "message": bot_status.get("message"),
+            "current_market": bot_status.get("current_market"),
             "market_stats": bot_status.get("market_stats"),
             "not_processed": bot_status.get("not_processed"),
             "zip_blob_name": bot_status.get("zip_blob_name")

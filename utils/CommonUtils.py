@@ -7,11 +7,14 @@ from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 from typing import Dict, Any
 
-from google.cloud import storage
+from google.cloud import storage, secretmanager
 
 from constants.Constants import VAT
+from helpers import logger
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent  # parent of utils/
 
+CONFIG_PATH = PROJECT_ROOT / "config.json"
 class common_utils:
     @staticmethod
     def read_json(filepath):
@@ -161,3 +164,5 @@ class common_utils:
         blob = bucket.blob(blob_name)
         blob.upload_from_filename(local_zip_path)
         return blob_name
+
+

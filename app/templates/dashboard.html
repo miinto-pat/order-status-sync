@@ -204,8 +204,9 @@ if (!document.getElementById("liveResultsTable")) {
             fetch("{{ url_for('bp.bot_status_endpoint') }}")
                 .then(resp => resp.json())
                 .then(status => {
-                    if (status.status === "running" && status.message === "Idle") {
-                        // ignore idle while running
+                    if (status.status === "running") {
+                        msgDiv.className = "alert alert-info mt-2";
+                        msgDiv.innerText = status.message || "Processing...";
                     } else if (msgDiv.innerText !== status.message) {
                         msgDiv.innerText = status.message || "Running...";
 }
@@ -222,7 +223,8 @@ if (!document.getElementById("liveResultsTable")) {
                                 tbody.appendChild(row);
                             }
 
-                            const isProcessing = status.message.includes(market) && !s.error;
+                            const isProcessing = status.status === "running"
+                                && status.current_market === market;
                             row.className = isProcessing ? "table-warning" : "";
 
                             row.innerHTML = `
