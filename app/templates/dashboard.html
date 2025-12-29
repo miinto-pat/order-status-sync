@@ -116,20 +116,30 @@ if (!document.getElementById("liveResultsTable")) {
 }
 
     const tbody = document.getElementById("marketRows");
-    const oldMarkets = Array.from(tbody.querySelectorAll("tr"))
-                            .map(row => row.getAttribute("data-market"));
+    // Map selected checkboxes to market names
+    const selectedMarketNames = selectedMarkets.map(id => CAMPAIGN_TO_MARKET[id]);
 
-    // Determine markets to run
-    let marketsToRun;
-    if (oldMarkets.length > 0 && selectedMarkets.every(id => oldMarkets.includes(CAMPAIGN_TO_MARKET[id]))) {
-        // Keep old + new
-        marketsToRun = selectedMarkets.filter(id => !oldMarkets.includes(CAMPAIGN_TO_MARKET[id]));
-    } else {
-        // New selection, clear table
-        marketsToRun = selectedMarkets;
-        tbody.innerHTML = "";
+    let marketsToRun = [];
+    let clearTable = false;
+
+    if (selectedMarketNames.length === 0) {
+        msgDiv.className = "alert alert-danger mt-2";
+        msgDiv.innerText = "Please select at least one market.";
+        btn.disabled = false;
+        return;
     }
 
+    // Check if any old market is selected
+    const hasOverlap = selectedMarketNames.some(m => oldMarkets.includes(m));
+
+    if (!hasOverlap) {
+        // Completely new selection, clear table
+        tbody.innerHTML = "";
+        marketsToRun = selectedMarketNames;
+    } else {
+        // Some overlap – only run newly selected markets not already in table
+        marketsToRun = selectedMarketNames.filter(m => !oldMarkets.includes(m));
+    }
 
     if (marketsToRun.length === 0) {
         msgDiv.className = "alert alert-info mt-2";
