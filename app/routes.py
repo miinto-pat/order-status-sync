@@ -130,11 +130,15 @@ def run_bot_thread(start_date=None, end_date=None, markets=None):
         all_campaign_ids = data.get("campaign_ids", [])
         not_processed_all = []
 
+
         if markets:
-            selected_ids = [int(m) for m in markets]
-            campaign_ids = [cid for cid in all_campaign_ids if cid in selected_ids]
+            # Map market codes to numeric campaign IDs
+            campaign_ids = [
+                cid for cid, market_code in COUNTRY_CODES_AND_CAMPAIGNS.items()
+                if market_code in markets
+            ]
         else:
-            campaign_ids = all_campaign_ids  # Fallback to all
+            campaign_ids = all_campaign_ids
 
         for campaign_id in campaign_ids:
             market = COUNTRY_CODES_AND_CAMPAIGNS.get(campaign_id, f"Unknown-{campaign_id}")
