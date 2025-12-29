@@ -144,7 +144,8 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
                             .map(row => row.getAttribute("data-market"));
 
     // Map selected checkboxes to market names
-    const selectedMarketNames = selectedMarkets.map(id => CAMPAIGN_TO_MARKET[id]);
+    const selectedMarketNames = selectedMarkets.map(id => CAMPAIGN_TO_MARKET[id]).filter(Boolean);
+
 
     let marketsToRun = [];
     const hasOverlap = selectedMarketNames.some(m => oldMarkets.includes(m));

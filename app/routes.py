@@ -131,8 +131,9 @@ def run_bot_thread(start_date=None, end_date=None, markets=None):
         not_processed_all = []
 
 
+
         if markets:
-            # Map market codes to numeric campaign IDs
+            # Map frontend market codes to numeric campaign IDs
             campaign_ids = [
                 cid for cid, market_code in COUNTRY_CODES_AND_CAMPAIGNS.items()
                 if market_code in markets
