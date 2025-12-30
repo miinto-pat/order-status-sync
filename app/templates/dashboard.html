@@ -140,6 +140,8 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
     }
 
     const tbody = document.getElementById("marketRows");
+    const selectedMarketNames = selectedMarkets.map(id => CAMPAIGN_TO_MARKET[id]).filter(Boolean);
+
     const marketsToRun = selectedMarketNames;
 
     if (marketsToRun.length === 0) {
@@ -152,7 +154,6 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
 <!--                            .map(row => row.getAttribute("data-market"));-->
 
 <!--    // Map selected checkboxes to market names-->
-        const selectedMarketNames = selectedMarkets.map(id => CAMPAIGN_TO_MARKET[id]).filter(Boolean);
 
 
 <!--    let marketsToRun = [];-->
