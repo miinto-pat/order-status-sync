@@ -85,9 +85,6 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
     const startDate = document.getElementById("startDate").value;
     const endDate = document.getElementById("endDate").value;
 
-    const selectedMarkets = Array.from(document.querySelectorAll("input[name='markets']:checked"))
-                                .map(cb => cb.value);
-
     // Validate inputs
     let missingFields = [];
     if (!startDate) missingFields.push("start date");
