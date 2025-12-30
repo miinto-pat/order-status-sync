@@ -274,9 +274,6 @@ def logout():
 def dashboard():
     return render_template("dashboard.html", markets=COUNTRY_CODES_AND_CAMPAIGNS)
 
-
-@bp.route("/run-bot", methods=["POST"])
-@login_required
 @bp.route("/run-bot", methods=["POST"])
 @login_required
 def run_bot():
