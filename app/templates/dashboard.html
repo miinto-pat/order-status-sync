@@ -89,6 +89,10 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
     let missingFields = [];
     if (!startDate) missingFields.push("start date");
     if (!endDate) missingFields.push("end date");
+
+    const selectedMarkets = Array.from(document.querySelectorAll("input[name='markets']:checked"))
+                            .map(cb => cb.value);
+
     if (selectedMarkets.length === 0) missingFields.push("at least one market");
 
     if (missingFields.length > 0) {
@@ -136,9 +140,7 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
         `;
     }
 
-   const tbody = document.getElementById("marketRows");
-   const selectedMarkets = Array.from(document.querySelectorAll("input[name='markets']:checked"))
-                            .map(cb => cb.value);
+    const tbody = document.getElementById("marketRows");
 
     const selectedMarketNames = selectedMarkets.map(id => CAMPAIGN_TO_MARKET[id]).filter(Boolean);
 
