@@ -310,6 +310,7 @@ def run_bot():
             return jsonify({"status": "error", "message": "No markets selected"}), 400
 
         with bot_status_lock:
+            bot_status.clear()
             bot_status.update({
                 "running": True,
                 "status": "running",
