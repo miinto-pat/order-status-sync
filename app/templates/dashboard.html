@@ -140,31 +140,39 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
     }
 
     const tbody = document.getElementById("marketRows");
-    const oldMarkets = Array.from(tbody.querySelectorAll("tr"))
-                            .map(row => row.getAttribute("data-market"));
-
-    // Map selected checkboxes to market names
-    const selectedMarketNames = selectedMarkets.map(id => CAMPAIGN_TO_MARKET[id]).filter(Boolean);
-
-
-    let marketsToRun = [];
-    const hasOverlap = selectedMarketNames.some(m => oldMarkets.includes(m));
-
-    if (!hasOverlap) {
-        // Completely new selection, clear table
-        tbody.innerHTML = "";
-        marketsToRun = selectedMarketNames;
-    } else {
-        // Some overlap – only run newly selected markets not already in table
-        marketsToRun = selectedMarketNames.filter(m => !oldMarkets.includes(m));
-    }
+    const marketsToRun = selectedMarketNames;
 
     if (marketsToRun.length === 0) {
-        msgDiv.className = "alert alert-info mt-2";
-        msgDiv.innerText = "All selected markets have already been processed.";
+        msgDiv.innerText = "No markets selected.";
         btn.disabled = false;
         return;
     }
+
+<!--    const oldMarkets = Array.from(tbody.querySelectorAll("tr"))-->
+<!--                            .map(row => row.getAttribute("data-market"));-->
+
+<!--    // Map selected checkboxes to market names-->
+<!--    const selectedMarketNames = selectedMarkets.map(id => CAMPAIGN_TO_MARKET[id]).filter(Boolean);-->
+
+
+<!--    let marketsToRun = [];-->
+<!--    const hasOverlap = selectedMarketNames.some(m => oldMarkets.includes(m));-->
+
+<!--    if (!hasOverlap) {-->
+<!--        // Completely new selection, clear table-->
+<!--        tbody.innerHTML = "";-->
+<!--        marketsToRun = selectedMarketNames;-->
+<!--    } else {-->
+<!--        // Some overlap – only run newly selected markets not already in table-->
+<!--        marketsToRun = selectedMarketNames.filter(m => !oldMarkets.includes(m));-->
+<!--    }-->
+
+<!--    if (marketsToRun.length === 0) {-->
+<!--        msgDiv.className = "alert alert-info mt-2";-->
+<!--        msgDiv.innerText = "All selected markets have already been processed.";-->
+<!--        btn.disabled = false;-->
+<!--        return;-->
+<!--    }-->
 
     // Reset UI
     msgDiv.className = "alert alert-info mt-2";

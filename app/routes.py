@@ -113,16 +113,19 @@ def run_bot_thread(start_date=None, end_date=None, markets=None):
     global bot_status
 
     with bot_status_lock:
+        bot_status.clear()
         bot_status.update({
             "running": True,
-            "message": "Bot started...",
             "status": "running",
+            "message": "Bot started...",
+            "current_market": None,
             "market_stats": {},
             "not_processed": [],
             "actions_by_state": {},
-    })
-
-
+            "csv_paths": {},
+            "zip_blob_name": None,
+            "zip_path": None,
+        })
 
     try:
         bot = main()
