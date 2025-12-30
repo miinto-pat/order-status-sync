@@ -152,7 +152,7 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
 <!--                            .map(row => row.getAttribute("data-market"));-->
 
 <!--    // Map selected checkboxes to market names-->
-<!--    const selectedMarketNames = selectedMarkets.map(id => CAMPAIGN_TO_MARKET[id]).filter(Boolean);-->
+        const selectedMarketNames = selectedMarkets.map(id => CAMPAIGN_TO_MARKET[id]).filter(Boolean);
 
 
 <!--    let marketsToRun = [];-->
@@ -197,7 +197,7 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
             btn.disabled = false;
             return;
         }
-
+        currentRunId = data.run_id;
         msgDiv.innerText = data.message || "Bot started...";
         window.botInterval = startPolling();
     })
@@ -213,6 +213,7 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
             fetch("{{ url_for('bp.bot_status_endpoint') }}")
                 .then(resp => resp.json())
                 .then(status => {
+                    if (status.run_id !== currentRunId) return;
                     if (status.status === "running") {
                         msgDiv.className = "alert alert-info mt-2";
                         msgDiv.innerText = status.message || "Processing...";
@@ -229,7 +230,9 @@ document.getElementById("runBotForm").addEventListener("submit", function(e) {
                                 tbody.appendChild(row);
                             }
 
-                            const isProcessing = status.message && status.message.includes(market) && !s.error;
+<!--                            const isProcessing = status.message && status.message.includes(market) && !s.error;-->
+                            const isProcessing = status.current_market === market;
+
                             row.className = isProcessing ? "table-warning" : "";
 
                             row.innerHTML = `
