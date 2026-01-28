@@ -13,5 +13,5 @@ COPY . .
 ENV PORT=8080
 EXPOSE 8080
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers","2","--threads","4", "--timeout", "300", "run:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers","1","--threads","1", "--timeout", "3600","--graceful-timeout", "3600", "run:app"]
 
