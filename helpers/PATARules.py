@@ -16,7 +16,26 @@ class PATARules:
         """
         voucher = response.get("voucher") or {}
         code = voucher.get("code")
-        return bool(code and str(code).strip())
+        if not code:
+            return False
+
+        code = str(code).strip()
+        if not code:
+            return False
+
+        allowed_prefixes = (
+            "MiintoStud",
+            "Alumni",
+            "MCMiinto",
+            "StuMiinto",
+            "RBTT",
+        )
+
+        # Ignore vouchers that should not be filtered out
+        if code.startswith(allowed_prefixes):
+            return False
+
+        return True
 
     @staticmethod
     def detect_fraud(response: dict) -> bool:
