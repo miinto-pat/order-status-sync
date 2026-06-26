@@ -1,24 +1,57 @@
-import requests
+from google.auth.exceptions import DefaultCredentialsError
+from google.oauth2 import id_token
 
-from constants.Constants import PATA_BASE_URL
+from constants.Constants import INTERNAL_ORDER_SERVICE_BASE_URL
 from helpers.PATARules import PATARules
 from helpers.logger import get_logger
 from utils.OrderMiiUUID import OrderMiiUUID
-
+import requests
 logger = get_logger(__name__)
 
-class PATAClient():
+from google.auth import default
+from google.auth.transport.requests import Request
+from google.auth.impersonated_credentials import IDTokenCredentials
+
+class PATAClient:
+
+    def get_id_token(self,audience):
+
+        try:
+            return id_token.fetch_id_token(Request(), audience)
+
+        except DefaultCredentialsError as e:
+            creds, _ = default()
+
+            id_creds = IDTokenCredentials(
+                target_credentials=creds,
+                target_audience=audience,
+                include_email=True,
+            )
+
+            id_creds.refresh(Request())
+            print(id_creds.token)
+            return id_creds.token
+
+
 
     def retrieve_order(self,market,order_id):
         market = market.lower()
-        url=PATA_BASE_URL + market+ "/order/" + order_id
+        url = (
+        f"{INTERNAL_ORDER_SERVICE_BASE_URL}/{market}/orders/{order_id}?expansions[]=all"
+    )
         logger.info(f"Retrieving order {str(order_id)}")
         try:
+            token = self.get_id_token(INTERNAL_ORDER_SERVICE_BASE_URL)
+
             response = requests.get(
                 url,
-                headers={"Accept": "application/json"}
+                headers={
+                    "Authorization": f"Bearer {token}"
+                },
+                timeout=30,
             )
-            if response.status_code != 200:
+
+            if not response.ok:
                 logger.error(f"Error {response.status_code}: {response.text}")
                 return None
 
@@ -31,7 +64,7 @@ class PATAClient():
 if __name__ == '__main__':
     PATAClient=PATAClient()
     PATARules=PATARules()
-    orders ={153896:"uk",
+    orders ={
         372221:"fr",
              2617866:"dk"}
     for order_id, market in orders.items():

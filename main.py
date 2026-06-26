@@ -16,7 +16,7 @@ class main:
         BASE_DIR = os.path.dirname(os.path.abspath(__file__))
         CONFIG_FILE_PATH = os.path.join(BASE_DIR, "config.json")
 
-        # ✅ Load configuration safely (from file or environment)
+        # Load configuration safely (from file or environment)
         data = None
         if os.path.exists(CONFIG_FILE_PATH):
             data = common_utils.read_json(CONFIG_FILE_PATH)

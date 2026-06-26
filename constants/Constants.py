@@ -1,5 +1,6 @@
 BASE_URL = "https://api.impact.com/Advertisers/"
 PATA_BASE_URL= "https://api-process-automation-api.miinto.net/v1/"
+INTERNAL_ORDER_SERVICE_BASE_URL = "https://pat-internal-order-service-git-373688639022.europe-west1.run.app"
 
 COUNTRY_CODES_AND_CAMPAIGNS = {
     30761:"DK",30894:"NO",
