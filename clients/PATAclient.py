@@ -39,7 +39,7 @@ class PATAClient:
         url = (
         f"{INTERNAL_ORDER_SERVICE_BASE_URL}/{market}/orders/{order_id}?expansions[]=all"
     )
-        logger.info(f"Retrieving order using the new internal service {str(order_id)}")
+        logger.info(f"Retrieving order using the new internal service {str(order_id)} {url}")
         try:
             token = self.get_id_token(INTERNAL_ORDER_SERVICE_BASE_URL)
 
