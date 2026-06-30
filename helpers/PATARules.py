@@ -1,80 +1,208 @@
-from typing import Tuple, Optional
+from __future__ import annotations
+
+import logging
+from typing import Any
+
+
+logger = logging.getLogger(__name__)
+
 
 class PATARules:
-    FRAUD_KEYWORDS = [
+    FRAUD_KEYWORDS = (
         "fraud risk",
         "fraud order",
         "do not refund",
         "do not issue refund",
         "declined rma process",
         "lost parcels process",
-    ]
+    )
+
+    IGNORED_VOUCHER_PREFIXES = (
+        "MiintoStud",
+        "Alumni",
+        "MCMiinto",
+        "StuMiinto",
+        "RBTT",
+    )
+
+    PENDING_STATES = {"CREATED", "ACTIVE", "ACCEPTED"}
+    RETURNED_STATUS = "RETURNED"
+    REJECTED_STATE = "REJECTED"
+    SHIPPED_STATE = "SHIPPED"
+
     @staticmethod
-    def has_voucher_code(response: dict) -> bool:
-        """
-        Return True if voucher.code exists and is non-empty (after strip).
-        """
-        voucher = response.get("voucher") or {}
-        code = voucher.get("code")
+    def has_voucher_code(order_data: dict[str, Any]) -> bool:
+        """Return True when a non-ignored voucher code is present."""
+        voucher = order_data.get("voucher")
+        if not voucher:
+            return False
+
+        if not isinstance(voucher, dict):
+            return True
+
+        code = str(voucher.get("code") or "").strip()
         if not code:
             return False
 
-        code = str(code).strip()
-        if not code:
-            return False
-
-        allowed_prefixes = (
-            "MiintoStud",
-            "Alumni",
-            "MCMiinto",
-            "StuMiinto",
-            "RBTT",
-        )
-
-        # Ignore vouchers that should not be filtered out
-        if code.startswith(allowed_prefixes):
-            return False
-
-        return True
+        return not any(prefix in code for prefix in PATARules.IGNORED_VOUCHER_PREFIXES)
 
     @staticmethod
-    def detect_fraud(response: dict) -> bool:
-        """
-        Scan order history for fraud-related messages.
-        Returns True if found.
-        """
-        data = response.get("data", {})
-        history = data.get("history", [])
-        if not history:
-            return False
+    def detect_fraud(response: dict[str, Any]) -> bool:
+        """Return True if an internal note contains a fraud/do-not-refund keyword."""
+        events = response.get("data", {}).get("events") or []
 
-        for note in history:
-            message = (note.get("message") or "").lower()
-            note_type = (note.get("type") or "").lower()
-            if note_type == "internal note":
-                for keyword in PATARules.FRAUD_KEYWORDS:
-                    if keyword in message:
-                        print(f"⚠️ Fraud/Do-Not-Refund detected: '{message}'")
-                        return True
-                    else:print(f"⚠️ Fraud not detected: '{message}'")
+        for event in events:
+            if not isinstance(event, dict):
+                continue
+
+            note_type = str(event.get("type") or "").lower()
+            if note_type != "internal note":
+                continue
+
+            message = str(event.get("message") or "").lower()
+            if any(keyword in message for keyword in PATARules.FRAUD_KEYWORDS):
+                logger.warning("Fraud/do-not-refund detected in internal note: %s", message)
+                return True
 
         return False
 
     @staticmethod
-    def calculate_action_reason_and_amount(response: dict) -> Tuple[Optional[str], Optional[int]]:
+    def _get_returned_position_ids(order_data: dict[str, Any]) -> set[str]:
+        """Return order position IDs that appear in order-level RMA as RETURNED."""
+        returned_ids: set[str] = set()
+        rma = order_data.get("rma") or {}
+
+        for case in rma.get("cases") or []:
+            for rma_position in case.get("positions") or []:
+                status = str(rma_position.get("status") or "").upper()
+                if status != PATARules.RETURNED_STATUS:
+                    continue
+
+                position_id = rma_position.get("id") or rma_position.get("positionId") or rma_position.get("orderPositionId")
+                if position_id:
+                    returned_ids.add(str(position_id))
+
+        return returned_ids
+
+    @staticmethod
+    def _is_position_returned(position: dict[str, Any], returned_position_ids: set[str] | None = None) -> bool:
+        """Return True if any RMA position has status RETURNED."""
+        position_id = position.get("id")
+        if returned_position_ids and position_id and str(position_id) in returned_position_ids:
+            return True
+
+        rma = position.get("rma") or {}
+
+        for case in rma.get("cases") or []:
+            for rma_position in case.get("positions") or []:
+                status = str(rma_position.get("status") or "").upper()
+                if status == PATARules.RETURNED_STATUS:
+                    return True
+
+        return False
+
+    @staticmethod
+    def _is_position_rejected(position: dict[str, Any]) -> bool:
+        return str(position.get("state") or "").upper() == PATARules.REJECTED_STATE
+
+    @staticmethod
+    def _is_position_returned_or_rejected(
+        position: dict[str, Any],
+        returned_position_ids: set[str] | None = None,
+    ) -> bool:
+        return PATARules._is_position_rejected(position) or PATARules._is_position_returned(
+            position,
+            returned_position_ids,
+        )
+
+    @staticmethod
+    def _is_order_fully_returned(order_data: dict[str, Any]) -> bool:
+        """Return True when every order position is returned or rejected."""
+        positions = order_data.get("positions") or []
+        returned_position_ids = PATARules._get_returned_position_ids(order_data)
+        return bool(positions) and all(
+            PATARules._is_position_returned_or_rejected(position, returned_position_ids)
+            for position in positions
+        )
+
+    @staticmethod
+    def _has_pending_positions(order_data: dict[str, Any]) -> bool:
+        """Return True if any position is still created, active, or accepted."""
+        return any(
+            str(position.get("state") or "").upper() in PATARules.PENDING_STATES
+            for position in order_data.get("positions") or []
+        )
+
+    @staticmethod
+    def _position_selling_price(position: dict[str, Any]) -> int:
+        """Return selling price in major currency units, defaulting to 0."""
+        try:
+            return int((position.get("sellingPrice") or 0) // 100)
+        except (TypeError, ValueError):
+            return 0
+
+    @staticmethod
+    def _get_partial_return_amount(order_data: dict[str, Any]) -> int | None:
         """
-        Determine PATA Reason and Action cost from a full order response.
+        Return the total selling price for positions that were not returned/rejected.
+
+        A partial return exists only when at least one position is returned/rejected
+        and at least one position is still kept.
+        """
+        positions = order_data.get("positions") or []
+        if not positions:
+            return None
+
+        returned_position_ids = PATARules._get_returned_position_ids(order_data)
+        returned_or_rejected = [
+            position
+            for position in positions
+            if PATARules._is_position_returned_or_rejected(position, returned_position_ids)
+        ]
+        kept_positions = [
+            position
+            for position in positions
+            if not PATARules._is_position_returned_or_rejected(position, returned_position_ids)
+        ]
+
+        if returned_or_rejected and kept_positions:
+            return sum(PATARules._position_selling_price(position) for position in kept_positions)
+
+        return None
+
+    @staticmethod
+    def _is_fully_accepted_and_processed(order_data: dict[str, Any]) -> bool:
+        """
+        Return True when all positions are shipped and no RMA positions exist.
+        """
+        positions = order_data.get("positions") or []
+        if not positions:
+            return False
+
+        if not all(str(position.get("state") or "").upper() == PATARules.SHIPPED_STATE for position in positions):
+            return False
+
+        rma = order_data.get("rma") or {}
+        for case in rma.get("cases") or []:
+            if case.get("positions"):
+                return False
+
+        return True
+
+    @staticmethod
+    def calculate_action_reason_and_amount(
+        response: dict[str, Any],
+    ) -> tuple[str | None, int | None]:
+        """
+        Determine PATA reason and action cost from a full order response.
 
         Returns:
-            - ("OTHER", 0) when voucher present or any pending position
-            - ("ITEM_RETURNED", 0) when ALL positions are returned/rejected
-            - ("ORDER_UPDATE", action_cost) when SOME positions returned/rejected (partial)
-            - (None, None) when order fully accepted/processed (no change needed)
+            ("OTHER", 0): voucher, fraud, pending order, or no positions
+            ("ITEM_RETURNED", 0): all positions returned/rejected
+            ("ORDER_UPDATE", amount): some positions returned/rejected
+            (None, None): fully accepted/processed or no matching rule
         """
-        # 1) Voucher check
-        order_data = response.get("data", {})
-        print(f"order data: {order_data}")
-
+        order_data = response.get("data") or {}
 
         if PATARules.detect_fraud(response):
             return "OTHER", 0
@@ -86,56 +214,17 @@ class PATARules:
         if not positions:
             return "OTHER", 0
 
-        # 🔹 Debug: Print orderId and positions info
-        order_id = order_data.get("orderId") or order_data.get("OrderId") or "<no id>"
-        print(f"Order {str(order_id)} has {len(positions)} positions:")
-        for i, p in enumerate(positions, start=1):
-            amount = p.get("amount", "<no amount>")
-            status = p.get("status", "<no status>")
-            print(f"  Position {i}: amount={amount}, status={status}")
-
-
-
-        def to_int(v):
-            try:
-                return int(v)
-            except Exception:
-                return 0
-
-        def status_of(p):
-            return (p.get("status") or "").strip().lower()
-
-
-        def is_pending(p):
-            return to_int(p.get("amount", 0)) >= 1 and status_of(p) == "pending"
-
-
-        def is_returned_or_rejected(p):
-            amt = to_int(p.get("amount", 0))
-            st = status_of(p)
-            # Pending in multi-position order treated as returned/rejected
-            if is_pending(p) and len(positions) > 1:
-                return True
-            return (st == "rejected" and amt == 1) or (amt == 0 and st in ("accepted", "sent"))
-
-        # 2) Pending positions -> OTHER
-        if len(positions) == 1 and status_of(positions[0]) == "pending" and to_int(positions[0].get("amount", 0)) >= 1:
-            return "OTHER", 0
-
-        # 3) Fully returned
-        if all(is_returned_or_rejected(p) for p in positions):
-            print("All positions returned/rejected, returning ITEM_RETURNED")
+        if PATARules._is_order_fully_returned(order_data):
             return "ITEM_RETURNED", 0
 
-        # 4) Partial return
-        if any(is_returned_or_rejected(p) for p in positions):
-            total_unrefunded = sum(
-                to_int((p.get("price") or {}).get("amount", 0))
-                for p in positions if not is_returned_or_rejected(p)
-            )
-            action_cost = total_unrefunded // 100
-            return "ORDER_UPDATE", action_cost
+        partial_amount = PATARules._get_partial_return_amount(order_data)
+        if partial_amount is not None:
+            return "ORDER_UPDATE", partial_amount
 
-        # 5) Fully processed (all sent, amount=1)
-        print("Order fully processed, returning None")
+        if PATARules._has_pending_positions(order_data):
+            return "OTHER", 0
+
+        if PATARules._is_fully_accepted_and_processed(order_data):
+            return None, None
+
         return None, None

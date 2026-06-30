@@ -1,180 +1,201 @@
-import pytest
-from helpers import PATARules
+import unittest
+
+from helpers.PATARules import PATARules
 
 
-# -----------------------------
-# Tests for has_voucher_code
-# -----------------------------
-@pytest.mark.parametrize(
-    "response,expected",
-    [
-        ({"voucher": {"code": "ABC123"}}, True),
-        ({"voucher": {"code": "  XYZ  "}}, True),
-        ({"voucher": {"code": ""}}, False),
-        ({"voucher": {"code": None}}, False),
-        ({"voucher": {}}, False),
-        ({}, False),
-        ({"voucher": None}, False),
-    ]
-)
-def test_has_voucher_code(response, expected):
-    assert PATARules.PATARules.has_voucher_code(response) is expected
-
-
-# -----------------------------
-# Tests for calculate_action_reason_and_amount
-# -----------------------------
-def make_position(status, amount, price_amount=None):
-    return {
-        "status": status,
-        "amount": amount,
-        "price": {"amount": price_amount} if price_amount is not None else None
-    }
-
-
-def test_calculate_with_voucher_returns_other():
-    response = {"data": {"voucher": {"code": "V123"}, "positions": []}}
-    reason, amount = PATARules.PATARules.calculate_action_reason_and_amount(response)
-    assert reason == "OTHER" and amount == 0
-
-
-def test_calculate_with_pending_position_returns_other():
-    response = {
-        "data": {
-            "positions": [
-                make_position("pending", 1)
-            ]
+class TestPATARules(unittest.TestCase):
+    def test_voucher_null_does_not_mark_other(self):
+        response = {
+            "data": {
+                "voucher": None,
+                "positions": [{"state": "SHIPPED", "sellingPrice": 1000}],
+            }
         }
-    }
-    reason, cost = PATARules.PATARules.calculate_action_reason_and_amount(response)
-    assert reason == "OTHER" and cost == 0
 
-def test_calculate_with_pending_multiple_position_returns_order_update():
-    response = {
-        "data": {
-            "positions": [
-                make_position("pending", 1),
-                make_position("sent", 1, price_amount=50000)
-            ]
+        self.assertEqual(
+            PATARules.calculate_action_reason_and_amount(response),
+            (None, None),
+        )
+
+    def test_non_null_voucher_marks_order_as_other(self):
+        response = {
+            "data": {
+                "voucher": {"amount": 4190,
+                            "code": "TREAT20",
+                            "createdAt": "2025-12-30T06:18:19+00:00",
+                            "updatedAt": "2025-12-30T06:18:19+00:00"},
+                "positions": [{"state": "SHIPPED", "sellingPrice": 1000}],
+            }
         }
-    }
-    reason, cost = PATARules.PATARules.calculate_action_reason_and_amount(response)
-    assert reason == "ORDER_UPDATE" and cost ==500
 
-def test_calculate_with_pending_multiple_position_returns_item_returned():
-    response = {
-        "data": {
-            "positions": [
-                make_position("pending", 1),
-                make_position("sent", 0, price_amount=50000)
-            ]
+        self.assertEqual(
+            PATARules.calculate_action_reason_and_amount(response),
+            ("OTHER", 0),
+        )
+
+    def test_ignored_voucher_prefix_does_not_mark_order_as_other(self):
+        response = {
+            "data": {
+                "voucher": {"code": "MiintoStud123"},
+                "positions": [{"state": "SHIPPED", "sellingPrice": 1000}],
+            }
         }
-    }
-    reason, cost = PATARules.PATARules.calculate_action_reason_and_amount(response)
-    assert reason == "ITEM_RETURNED" and cost ==0
 
-def test_calculate_with_pending_multiple_position_returns_item_returned_rejected_0():
-    response = {
-        "data": {
-            "positions": [
-                make_position("pending", 1),
-                make_position("rejected", 1, price_amount=50000)
-            ]
+        self.assertEqual(
+            PATARules.calculate_action_reason_and_amount(response),
+            (None, None),
+        )
+
+    def test_fraud_internal_note_marks_order_as_other(self):
+        response = {
+            "data": {
+                "events": [
+                    {
+                        "accessorIdentifier": "PATA-Legacy",
+                        "createdAt": "2025-12-30T06:18:20+01:00",
+                        "message": "Customer has fraud risk. Do not refund.",
+                        "type": "internal note"
+
+                    }
+                ],
+                "positions": [{"state": "SHIPPED", "sellingPrice": 1000}],
+            }
         }
-    }
-    reason, cost = PATARules.PATARules.calculate_action_reason_and_amount(response)
-    assert reason == "ITEM_RETURNED" and cost ==0
 
-def test_calculate_fully_returned_rejected_1():
-    response = {
-        "data": {
-            "positions": [
-                make_position("rejected", 1)
+        self.assertEqual(
+            PATARules.calculate_action_reason_and_amount(response),
+            ("OTHER", 0),
+        )
 
-            ]
+    def test_fraud_keyword_in_non_internal_note_is_ignored(self):
+        response = {
+            "data": {
+                "events": [{"type": "customer note", "message": "fraud risk"}],
+                "positions": [{"state": "SHIPPED", "sellingPrice": 1000}],
+            }
         }
-    }
-    reason, cost = PATARules.PATARules.calculate_action_reason_and_amount(response)
-    assert reason == "ITEM_RETURNED" and cost == 0
 
-def test_calculate_fully_returned_accepted_0():
-    response = {
-        "data": {
-            "positions": [
-                make_position("accepted", 0)
+        self.assertEqual(
+            PATARules.calculate_action_reason_and_amount(response),
+            (None, None),
+        )
 
-            ]
+    def test_fully_returned_order_marks_item_returned(self):
+        response = {
+            "data": {
+                "positions": [
+                    {
+                        "state": "SHIPPED",
+                        "sellingPrice": 1000,
+                        "rma": {
+                            "cases": [
+                                {"positions": [{"status": "RETURNED"}]},
+                            ]
+                        },
+                    },
+                    {"state": "REJECTED", "sellingPrice": 2000},
+                ]
+            }
         }
-    }
-    reason, cost = PATARules.PATARules.calculate_action_reason_and_amount(response)
-    assert reason == "ITEM_RETURNED" and cost == 0
 
-def test_calculate_fully_returned_sent_0():
-    response = {
-        "data": {
-            "positions": [
-                make_position("sent", 0)
+        self.assertEqual(
+            PATARules.calculate_action_reason_and_amount(response),
+            ("ITEM_RETURNED", 0),
+        )
 
-            ]
+    def test_partial_return_marks_order_update_with_kept_position_amount(self):
+        response = {
+            "data": {
+
+                "id": "test-order-123",
+
+                "positions": [
+                    {
+                        "state": "SHIPPED",
+                        "id": "688550",
+                        "sellingPrice": 8450
+                    },
+                    {
+                        "state": "SHIPPED",
+                        "id": "688551",
+                        "sellingPrice": 12500
+                    }
+                ],
+
+                "rma": {
+                    "cases": [
+                        {
+                            "id": "88576",
+                            "positions": [
+                                {
+                                    "id": "688550",
+                                    "status": "RETURNED",
+                                    "returnPriceGross": 8450
+                                }
+                            ]
+
+                        }
+                    ],
+                    "eligibility": {
+                        "positions": [
+                            {
+                                "id": "688550",
+                                "eligibleForRma": False,
+                                "sellingPriceGross": 8450
+                            },
+                            {
+                                "id": "688551",
+                                "eligibleForRma": False,
+                                "sellingPriceGross": 12500
+                            }
+                        ]
+                    }
+                }
+            }
         }
-    }
-    reason, cost = PATARules.PATARules.calculate_action_reason_and_amount(response)
-    assert reason == "ITEM_RETURNED" and cost == 0
 
-def test_calculate_fully_returned_multiple_positions():
-    # Multiple positions, all either rejected (amount=1) or returned (amount=0, status=accepted/sent)
-    response = {
-        "data": {
-            "positions": [
-                make_position("rejected", 1, 15100),
-                make_position("accepted", 0, 36000),
-                make_position("sent", 0, 20000)
-            ]
-        }
-    }
+        self.assertEqual(
+                PATARules.calculate_action_reason_and_amount(response),
+                ("ORDER_UPDATE", 125),
+            )
 
-    reason, cost = PATARules.PATARules.calculate_action_reason_and_amount(response)
+    def test_pending_position_marks_order_as_other(self):
+        response = {
+                "data": {
+                    "positions": [
+                        {"state": "ACTIVE", "sellingPrice": 1000}
 
-    assert reason == "ITEM_RETURNED"
-    assert cost == 0
+                    ]
+                }
+            }
 
-def test_calculate_partial_return_returns_order_update():
-    # One position refunded (amount 53000), one not refunded (amount 3900)
-    response = {
-        "data": {
-            "positions": [
-                make_position("accepted", 0, 53000),  # refunded/returned
-                make_position("sent", 1, 3900),       # not refunded
-            ]
-        }
-    }
+        self.assertEqual(
+                PATARules.calculate_action_reason_and_amount(response),
+                ("OTHER", 0),
+            )
 
-    reason, cost = PATARules.PATARules.calculate_action_reason_and_amount(response)
+    def test_fully_shipped_order_without_rma_returns_no_action(self):
+        response = {
+                "data": {
+                    "positions": [
+                        {"state": "SHIPPED", "sellingPrice": 1000},
+                        {"state": "SHIPPED", "sellingPrice": 2000},
+                    ]
+                }
+            }
 
-    assert reason == "ORDER_UPDATE"
-    assert cost == 39
+        self.assertEqual(
+                PATARules.calculate_action_reason_and_amount(response),
+                (None, None),
+            )
 
+    def test_no_positions_marks_order_as_other(self):
+        response = {"data": {"positions": []}}
 
-def test_calculate_fully_processed_returns_none():
-    response = {
-        "data": {
-            "positions": [
-                make_position("accepted", 1),
-                make_position("sent", 1)
-            ]
-        }
-    }
-    reason, cost = PATARules.PATARules.calculate_action_reason_and_amount(response)
-    assert reason is None and cost is None
+        self.assertEqual(
+                PATARules.calculate_action_reason_and_amount(response),
+                ("OTHER", 0),
+            )
 
-
-def test_calculate_no_positions_returns_other():
-    response = {"data": {"positions": []}}
-    reason, cost = PATARules.PATARules.calculate_action_reason_and_amount(response)
-    assert reason == "OTHER" and cost == 0
-
-
-def test_calculate_handles_missing_data_key():
-    response = {}  # no "data" key
-    reason, cost = PATARules.PATARules.calculate_action_reason_and_amount(response)
-    assert reason == "OTHER" and cost == 0
+if __name__ == "__main__":
+        unittest.main()
