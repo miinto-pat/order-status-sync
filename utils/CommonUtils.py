@@ -3,6 +3,7 @@ import datetime
 import io
 import json
 import os
+import tempfile
 from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 from typing import Dict, Any
@@ -24,7 +25,7 @@ class common_utils:
                 print(f"Error: File not found at {filepath}")
                 return None
 
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, 'r', encoding='utf-8-sig') as f:
                 data = json.load(f)  # Load JSON data into a Python dictionary or list
                 return data
         except FileNotFoundError:
@@ -72,7 +73,7 @@ class common_utils:
                 pass
             if p.exists() and p.is_file():
                 try:
-                    with p.open("r", encoding="utf-8") as fh:
+                    with p.open("r", encoding="utf-8-sig") as fh:
                         return json.load(fh)
                 except json.JSONDecodeError as e:
                     raise ValueError(f"Invalid JSON in config file {p}: {e}") from e
@@ -141,7 +142,7 @@ class common_utils:
         writer.writerows(rows)
 
         filename = f"{market}_{target_state}_results.csv"
-        tmp_dir = "/tmp"
+        tmp_dir = tempfile.gettempdir()
         file_path = os.path.join(tmp_dir, filename)
         # output_dir = os.path.join(os.getcwd(), "output")
         # os.makedirs(output_dir, exist_ok=True)

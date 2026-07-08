@@ -14,13 +14,14 @@ from utils.CommonUtils import common_utils
 logger = get_logger(__name__)
 
 class ImpactClient:
-    def __init__(self,data, market):
+    def __init__(self,data, market, session=None):
         if isinstance(data, str):  # path to config file
             self.config = common_utils.read_json(data)
             print(data)
             print(self.config)
         else:  # already a dictionary
             self.config = data
+        self.session = session or requests.Session()
         account_SID = f"account_SID_{market}"
         print(f"SID: {account_SID}")
         token = f"token_{market}"
@@ -138,7 +139,7 @@ class ImpactClient:
         all_actions = []
         while True:
             try:
-                response = requests.get(
+                response = self.session.get(
                     url,
                     auth=HTTPBasicAuth(self.username, self.password),
                     headers={"Accept": "application/json"},
@@ -176,7 +177,7 @@ class ImpactClient:
         url=BASE_URL+self.username+"/Actions/"+action_id
         logger.info(f"Retrieving action {action_id}")
         try:
-            response = requests.get(
+            response = self.session.get(
                 url,
                 auth=HTTPBasicAuth(self.username, self.password),
                 headers={"Accept": "application/json"}
@@ -206,7 +207,7 @@ class ImpactClient:
         }
         print(f"update action body: {action_id}, {body}")
         try:
-            response = requests.put(
+            response = self.session.put(
                 url,
                 auth = HTTPBasicAuth(self.username, self.password),
                 headers = {"Accept": "application/json"},
@@ -236,7 +237,7 @@ class ImpactClient:
 
         }
         try:
-            response = requests.delete(
+            response = self.session.delete(
                 url,
                 auth=HTTPBasicAuth(self.username, self.password),
                 headers={"Accept": "application/json"},

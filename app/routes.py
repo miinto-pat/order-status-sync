@@ -14,6 +14,7 @@ from constants.Constants import COUNTRY_CODES_AND_CAMPAIGNS
 from main import main, logger
 from utils import CommonUtils
 from utils.CommonUtils import common_utils
+from utils.RunTimer import RunTimer
 from google.cloud import secretmanager
 from flask import current_app
 
@@ -43,7 +44,7 @@ def load_config_from_secret(secret_name: str = "impact_secret_json"):
                 os.path.dirname(os.path.dirname(__file__)),
                 "config.json"
             )
-            with open(local_config_path, "r", encoding="utf-8") as f:
+            with open(local_config_path, "r", encoding="utf-8-sig") as f:
                 local_config = json.load(f)
                 logger.info(f"Loaded fallback config from {local_config_path}")
                 return local_config
@@ -121,6 +122,14 @@ def run_bot_thread(start_date=None, end_date=None, markets=None, run_id=None):
     run_id is unique for this run to avoid conflicts with previous runs.
     """
     global bot_status
+    timer = RunTimer(
+        run_id=run_id,
+        context={
+            "start_date": start_date,
+            "end_date": end_date,
+            "markets": markets or [],
+        },
+    )
 
     with bot_status_lock:
         # Initialize bot_status for this run
@@ -141,7 +150,8 @@ def run_bot_thread(start_date=None, end_date=None, markets=None, run_id=None):
 
     try:
         bot = main()
-        data = common_utils.load_config()
+        with timer.measure("run.config_load"):
+            data = common_utils.load_config()
         all_campaign_ids = data.get("campaign_ids", [])
 
         # Map frontend market codes to numeric campaign IDs
@@ -165,18 +175,21 @@ def run_bot_thread(start_date=None, end_date=None, markets=None, run_id=None):
 
             try:
                 # Process one market
-                result = bot.process_single_market(campaign_id, market, start_date, end_date)
+                with timer.measure("market.process_single_market", campaign_id=campaign_id, market=market):
+                    result = bot.process_single_market(campaign_id, market, start_date, end_date, timer=timer)
                 stats = result["stats"]
                 not_processed = result["not_processed"]
                 actions_by_state = result.get("actions_by_state", {})
 
                 # Create CSVs
-                processed_csv_path = CommonUtils.common_utils.create_market_csv(
-                    market, actions_by_state, {"OTHER", "ORDER_UPDATE", "ITEM_RETURNED"}, "processed"
-                )
-                not_processed_csv_path = CommonUtils.common_utils.create_market_csv(
-                    market, actions_by_state, {"Not_Processed"}, "not_processed"
-                )
+                with timer.measure("csv.create_market_csv", campaign_id=campaign_id, market=market, target_state="processed"):
+                    processed_csv_path = CommonUtils.common_utils.create_market_csv(
+                        market, actions_by_state, {"OTHER", "ORDER_UPDATE", "ITEM_RETURNED"}, "processed"
+                    )
+                with timer.measure("csv.create_market_csv", campaign_id=campaign_id, market=market, target_state="not_processed"):
+                    not_processed_csv_path = CommonUtils.common_utils.create_market_csv(
+                        market, actions_by_state, {"Not_Processed"}, "not_processed"
+                    )
 
                 with bot_status_lock:
                     bot_status.setdefault("csv_paths", {})
@@ -206,15 +219,17 @@ def run_bot_thread(start_date=None, end_date=None, markets=None, run_id=None):
         # After all markets, generate ZIP
         csv_paths = bot_status.get("csv_paths", {})
         if csv_paths:
-            zip_fd, zip_path = tempfile.mkstemp(suffix=".zip")
-            os.close(zip_fd)
+            with timer.measure("zip.create", file_count=len(csv_paths)):
+                zip_fd, zip_path = tempfile.mkstemp(suffix=".zip")
+                os.close(zip_fd)
 
-            with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-                for key, csv_path in csv_paths.items():
-                    if csv_path and os.path.exists(csv_path):
-                        zipf.write(csv_path, arcname=os.path.basename(csv_path))
+                with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+                    for key, csv_path in csv_paths.items():
+                        if csv_path and os.path.exists(csv_path):
+                            zipf.write(csv_path, arcname=os.path.basename(csv_path))
 
-            blob_name = utils.CommonUtils.common_utils.upload_zip_to_gcs(zip_path)
+            with timer.measure("gcs.upload_zip"):
+                blob_name = utils.CommonUtils.common_utils.upload_zip_to_gcs(zip_path)
             with bot_status_lock:
                 bot_status["zip_blob_name"] = blob_name
                 bot_status["zip_path"] = None
@@ -239,6 +254,8 @@ def run_bot_thread(start_date=None, end_date=None, markets=None, run_id=None):
                 "market_stats": {},
                 "not_processed": [],
             })
+    finally:
+        timer.log_summary(logger)
 
 
 
