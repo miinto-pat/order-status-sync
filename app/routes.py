@@ -2,6 +2,7 @@ import json
 import os
 import tempfile
 import threading
+import time
 import traceback
 import uuid
 import zipfile
@@ -11,9 +12,19 @@ from flask_login import login_required, login_user, logout_user, current_user, U
 
 import utils
 from constants.Constants import COUNTRY_CODES_AND_CAMPAIGNS
+from clients.ImpactClient import ImpactClient
+from clients.ImpactSFTPClient import ImpactSFTPClient, config_from_app_config
 from main import main, logger
 from utils import CommonUtils
 from utils.CommonUtils import common_utils
+from utils.ImpactBatch import (
+    batch_rows_from_actions_by_state,
+    create_batch_file_path,
+    create_market_batch_zip_file_path,
+    write_batch_csv,
+    write_market_batch_zip,
+)
+from utils.ProgressTracker import ProgressTracker
 from utils.RunTimer import RunTimer
 from google.cloud import secretmanager
 from flask import current_app
@@ -75,6 +86,8 @@ bot_status = {"running": False,
               "status": "idle",
               "current_market": None,
               "market_stats": {},
+              "progress": ProgressTracker([]).snapshot(),
+              "sftp_batch": {},
               "zip_path": None,
               "csv_paths": {}
               }
@@ -111,12 +124,85 @@ def get_zip_url():
     return jsonify({"url": url})
 
 
+@bp.route("/download-sftp-batch")
+@login_required
+def download_sftp_batch():
+    with bot_status_lock:
+        batch = bot_status.get("sftp_batch") or {}
+        path = batch.get("file_path")
+        file_name = batch.get("file_name") or "impact_batch.csv"
+
+    if not path or not os.path.exists(path):
+        return jsonify({"error": "SFTP batch file is not ready"}), 404
+
+    return send_file(path, as_attachment=True, download_name=file_name)
+
+
+@bp.route("/download-sftp-market-batches")
+@login_required
+def download_sftp_market_batches():
+    with bot_status_lock:
+        batch = bot_status.get("sftp_batch") or {}
+        path = batch.get("market_zip_path")
+        file_name = batch.get("market_zip_file_name") or "impact_batch_by_market.zip"
+
+    if not path or not os.path.exists(path):
+        return jsonify({"error": "SFTP market batch ZIP is not ready"}), 404
+
+    return send_file(path, as_attachment=True, download_name=file_name)
+
+
 import uuid
+
+
+def _new_sftp_batch_status(enabled=False):
+    return {
+        "enabled": enabled,
+        "status": "disabled" if not enabled else "pending",
+        "message": "SFTP batch mode is disabled." if not enabled else "SFTP batch pending.",
+        "file_available": False,
+        "file_name": None,
+        "market_zip_available": False,
+        "market_zip_file_name": None,
+        "market_files": {},
+        "row_count": 0,
+        "uploaded": False,
+        "remote_path": None,
+        "submission": None,
+        "errors": [],
+    }
+
+
+def _poll_ftp_submission(impact_client, file_name, timeout_seconds=900, interval_seconds=30):
+    deadline = time.time() + max(0, int(timeout_seconds))
+    interval_seconds = max(1, int(interval_seconds))
+
+    while True:
+        submissions = impact_client.list_ftp_submissions()
+        matching = [
+            item for item in submissions
+            if item.get("FileName") == file_name
+        ]
+        if matching:
+            submission = matching[0]
+            status = submission.get("Status")
+            if status == "Complete":
+                errors = []
+                errors_uri = submission.get("ErrorsUri")
+                if errors_uri and int(submission.get("TotalErrors") or 0) > 0:
+                    errors = impact_client.list_ftp_submission_errors(errors_uri)
+                return submission, errors
+
+        if time.time() >= deadline:
+            return None, []
+
+        time.sleep(interval_seconds)
+
 
 # -----------------------------
 # RUN BOT THREAD
 # -----------------------------
-def run_bot_thread(start_date=None, end_date=None, markets=None, run_id=None):
+def run_bot_thread(start_date=None, end_date=None, markets=None, run_id=None, impact_delivery_mode="rest"):
     """
     Thread function that runs the bot for selected markets.
     run_id is unique for this run to avoid conflicts with previous runs.
@@ -128,10 +214,34 @@ def run_bot_thread(start_date=None, end_date=None, markets=None, run_id=None):
             "start_date": start_date,
             "end_date": end_date,
             "markets": markets or [],
+            "impact_delivery_mode": impact_delivery_mode,
         },
     )
+    progress_tracker = ProgressTracker(markets or [])
+    sftp_batch_status = _new_sftp_batch_status(impact_delivery_mode == "batch_sftp")
+
+    def publish_progress():
+        bot_status["progress"] = progress_tracker.snapshot()
+
+    def handle_market_progress(event):
+        market = event.get("market")
+        event_name = event.get("event")
+
+        with bot_status_lock:
+            if event_name == "actions_loaded":
+                progress_tracker.actions_loaded(market, event.get("total_actions", 0))
+            elif event_name == "action_completed":
+                progress_tracker.action_completed(
+                    market,
+                    event.get("processed_actions", 0),
+                    event.get("stats", {}),
+                )
+            elif event_name == "market_finished":
+                progress_tracker.finish_market(market, event.get("stats", {}))
+            publish_progress()
 
     with bot_status_lock:
+        progress_tracker.start_run()
         # Initialize bot_status for this run
         bot_status.update({
             "running": True,
@@ -142,11 +252,13 @@ def run_bot_thread(start_date=None, end_date=None, markets=None, run_id=None):
             "not_processed": [],
             "actions_by_state": {},
             "csv_paths": {},
+            "sftp_batch": sftp_batch_status,
             "zip_blob_name": None,
             "zip_path": None,
             "run_id": run_id,
             "last_run_markets": markets or []
         })
+        publish_progress()
 
     try:
         bot = main()
@@ -163,23 +275,46 @@ def run_bot_thread(start_date=None, end_date=None, markets=None, run_id=None):
         else:
             campaign_ids = all_campaign_ids
 
+        if not markets:
+            selected_market_codes = [
+                COUNTRY_CODES_AND_CAMPAIGNS.get(cid, f"Unknown-{cid}")
+                for cid in campaign_ids
+            ]
+            progress_tracker = ProgressTracker(selected_market_codes)
+            with bot_status_lock:
+                progress_tracker.start_run()
+                publish_progress()
+
         not_processed_all = []
+        impact_batch_rows = []
 
         for campaign_id in campaign_ids:
             market = COUNTRY_CODES_AND_CAMPAIGNS.get(campaign_id, f"Unknown-{campaign_id}")
 
             with bot_status_lock:
+                progress_tracker.start_market(market)
                 bot_status["current_market"] = market
                 bot_status["message"] = f"Processing market: {market}..."
                 bot_status["status"] = "running"
+                publish_progress()
 
             try:
                 # Process one market
                 with timer.measure("market.process_single_market", campaign_id=campaign_id, market=market):
-                    result = bot.process_single_market(campaign_id, market, start_date, end_date, timer=timer)
+                    result = bot.process_single_market(
+                        campaign_id,
+                        market,
+                        start_date,
+                        end_date,
+                        timer=timer,
+                        progress_callback=handle_market_progress,
+                        impact_delivery_mode=impact_delivery_mode,
+                    )
                 stats = result["stats"]
                 not_processed = result["not_processed"]
                 actions_by_state = result.get("actions_by_state", {})
+                if impact_delivery_mode == "batch_sftp":
+                    impact_batch_rows.extend(batch_rows_from_actions_by_state(market, actions_by_state))
 
                 # Create CSVs
                 with timer.measure("csv.create_market_csv", campaign_id=campaign_id, market=market, target_state="processed"):
@@ -200,6 +335,8 @@ def run_bot_thread(start_date=None, end_date=None, markets=None, run_id=None):
                     bot_status["market_stats"][market] = {k: v or 0 for k, v in stats.items()}
                     not_processed_all.extend(not_processed)
                     bot_status["not_processed"] = not_processed_all
+                    progress_tracker.finish_market(market, stats)
+                    publish_progress()
 
             except Exception as e:
                 logger.exception(f"Error processing market {market}: {e}")
@@ -215,10 +352,121 @@ def run_bot_thread(start_date=None, end_date=None, markets=None, run_id=None):
                     not_processed_all.append({"market": market, "action_id": "N/A", "error": str(e)})
                     bot_status["actions_by_state"][market] = {}
                     bot_status["not_processed"] = not_processed_all
+                    progress_tracker.fail_market(market, e)
+                    publish_progress()
+
+        if impact_delivery_mode == "batch_sftp":
+            with bot_status_lock:
+                bot_status["sftp_batch"].update({
+                    "status": "creating_file",
+                    "message": "Creating Impact batch CSV...",
+                    "row_count": len(impact_batch_rows),
+                })
+
+            if impact_batch_rows:
+                with timer.measure("impact_batch.create_csv", row_count=len(impact_batch_rows)):
+                    batch_path = create_batch_file_path(run_id, markets or selected_market_codes)
+                    write_batch_csv(batch_path, impact_batch_rows)
+                    market_zip_path = create_market_batch_zip_file_path(run_id, markets or selected_market_codes)
+                    market_files = write_market_batch_zip(market_zip_path, impact_batch_rows, run_id=run_id)
+
+                batch_file_name = os.path.basename(batch_path)
+                market_zip_file_name = os.path.basename(market_zip_path)
+                with bot_status_lock:
+                    bot_status.setdefault("csv_paths", {})
+                    bot_status["csv_paths"]["impact_sftp_batch"] = batch_path
+                    bot_status["sftp_batch"].update({
+                        "status": "file_ready",
+                        "message": "Impact batch CSV is ready.",
+                        "file_available": True,
+                        "file_path": batch_path,
+                        "file_name": batch_file_name,
+                        "market_zip_available": True,
+                        "market_zip_path": market_zip_path,
+                        "market_zip_file_name": market_zip_file_name,
+                        "market_files": market_files,
+                        "row_count": len(impact_batch_rows),
+                    })
+
+                sftp_config = config_from_app_config(data)
+                if sftp_config:
+                    try:
+                        with bot_status_lock:
+                            bot_status["sftp_batch"].update({
+                                "status": "uploading",
+                                "message": "Uploading Impact batch CSV through SFTP...",
+                            })
+
+                        with timer.measure("impact_batch.sftp_upload", row_count=len(impact_batch_rows)):
+                            remote_path = ImpactSFTPClient(sftp_config).upload_file(batch_path)
+
+                        with bot_status_lock:
+                            bot_status["sftp_batch"].update({
+                                "status": "uploaded",
+                                "message": "Impact batch CSV uploaded. Waiting for Impact confirmation...",
+                                "uploaded": True,
+                                "remote_path": remote_path,
+                            })
+
+                        first_market = (markets or selected_market_codes or [None])[0]
+                        if first_market:
+                            timeout_seconds = data.get("impact_sftp_poll_timeout_seconds", 900)
+                            interval_seconds = data.get("impact_sftp_poll_interval_seconds", 30)
+                            with timer.measure("impact_batch.poll_submission", file_name=batch_file_name):
+                                submission, errors = _poll_ftp_submission(
+                                    ImpactClient(data, market=first_market),
+                                    batch_file_name,
+                                    timeout_seconds=timeout_seconds,
+                                    interval_seconds=interval_seconds,
+                                )
+
+                            with bot_status_lock:
+                                if submission:
+                                    total_errors = int(submission.get("TotalErrors") or 0)
+                                    bot_status["sftp_batch"].update({
+                                        "status": "complete_with_errors" if total_errors else "complete",
+                                        "message": (
+                                            f"Impact processed the batch with {total_errors} error(s)."
+                                            if total_errors else
+                                            "Impact processed the batch successfully."
+                                        ),
+                                        "submission": submission,
+                                        "errors": errors,
+                                    })
+                                else:
+                                    bot_status["sftp_batch"].update({
+                                        "status": "uploaded_waiting_confirmation",
+                                        "message": "Uploaded to SFTP, but Impact submission was not visible before polling timed out.",
+                                    })
+                    except Exception as e:
+                        logger.exception("Impact SFTP upload or confirmation failed")
+                        with bot_status_lock:
+                            bot_status["sftp_batch"].update({
+                                "status": "upload_error",
+                                "message": str(e),
+                                "uploaded": False,
+                            })
+                else:
+                    with bot_status_lock:
+                        bot_status["sftp_batch"].update({
+                            "status": "manual_upload_available",
+                            "message": "SFTP credentials are not configured. Download the combined CSV or the per-market ZIP and upload manually.",
+                        })
+            else:
+                with bot_status_lock:
+                    bot_status["sftp_batch"].update({
+                        "status": "empty",
+                        "message": "No Impact changes were prepared for SFTP batch upload.",
+                        "file_available": False,
+                        "row_count": 0,
+                    })
 
         # After all markets, generate ZIP
         csv_paths = bot_status.get("csv_paths", {})
         if csv_paths:
+            with bot_status_lock:
+                progress_tracker.start_zip()
+                publish_progress()
             with timer.measure("zip.create", file_count=len(csv_paths)):
                 zip_fd, zip_path = tempfile.mkstemp(suffix=".zip")
                 os.close(zip_fd)
@@ -236,6 +484,7 @@ def run_bot_thread(start_date=None, end_date=None, markets=None, run_id=None):
 
         # Mark finished
         with bot_status_lock:
+            progress_tracker.finish_run(f"Bot finished. {len(campaign_ids)} market(s) processed.")
             bot_status.update({
                 "status": "finished",
                 "running": False,
@@ -243,9 +492,12 @@ def run_bot_thread(start_date=None, end_date=None, markets=None, run_id=None):
                 "message": f"✅ Bot finished. {len(campaign_ids)} market(s) processed."
             })
 
+            publish_progress()
+
     except Exception as e:
         logger.exception("Global bot error")
         with bot_status_lock:
+            progress_tracker.fail_run(str(e))
             bot_status.update({
                 "status": "error",
                 "running": False,
@@ -254,6 +506,7 @@ def run_bot_thread(start_date=None, end_date=None, markets=None, run_id=None):
                 "market_stats": {},
                 "not_processed": [],
             })
+            publish_progress()
     finally:
         timer.log_summary(logger)
 
@@ -300,6 +553,7 @@ def run_bot():
     start_date = data.get("start_date")
     end_date = data.get("end_date")
     markets = data.get("markets", [])
+    impact_delivery_mode = data.get("impact_delivery_mode", "rest")
 
     if not markets:
         return jsonify({"status": "error", "message": "No markets selected"}), 400
@@ -314,7 +568,7 @@ def run_bot():
     # Start bot thread
     thread = threading.Thread(
         target=run_bot_thread,
-        args=(start_date, end_date, markets, run_id),
+        args=(start_date, end_date, markets, run_id, impact_delivery_mode),
         daemon=True
     )
     thread.start()
@@ -330,12 +584,17 @@ def run_bot():
 @login_required
 def bot_status_endpoint():
     with bot_status_lock:
+        sftp_batch = dict(bot_status.get("sftp_batch") or {})
+        sftp_batch.pop("file_path", None)
+        sftp_batch.pop("market_zip_path", None)
         return jsonify({
             "status": bot_status.get("status"),
             "message": bot_status.get("message"),
             "current_market": bot_status.get("current_market"),
             "market_stats": bot_status.get("market_stats"),
             "not_processed": bot_status.get("not_processed"),
+            "progress": bot_status.get("progress"),
+            "sftp_batch": sftp_batch,
             "zip_blob_name": bot_status.get("zip_blob_name"),
             "run_id": bot_status.get("run_id")
         })

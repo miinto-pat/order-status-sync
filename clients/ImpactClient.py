@@ -6,6 +6,7 @@ import pytz
 
 import requests
 from requests.auth import HTTPBasicAuth
+from urllib.parse import urljoin
 
 from constants.Constants import BASE_URL, COUNTRY_CODES_AND_CAMPAIGNS
 from helpers.logger import get_logger
@@ -255,6 +256,39 @@ class ImpactClient:
         except requests.RequestException as e:
             logger.error(f"Error updating action {action_id}: {e}")
             return None
+
+    def _impact_get(self, path_or_url):
+        base = BASE_URL + self.username + "/"
+        url = path_or_url
+        if path_or_url.startswith("/"):
+            url = "https://api.impact.com" + path_or_url
+        elif not path_or_url.startswith("http"):
+            url = urljoin(base, path_or_url)
+
+        response = self.session.get(
+            url,
+            auth=HTTPBasicAuth(self.username, self.password),
+            headers={"Accept": "application/json"},
+        )
+        if response.status_code not in (200, 201):
+            logger.error(f"Error {response.status_code}: {response.text}")
+            return None
+        return response.json()
+
+    def list_ftp_submissions(self):
+        data = self._impact_get("FTPFileSubmissions")
+        if not data:
+            return []
+        return data.get("FTPFileSubmissions", [])
+
+    def retrieve_ftp_submission(self, uri):
+        return self._impact_get(uri)
+
+    def list_ftp_submission_errors(self, errors_uri):
+        data = self._impact_get(errors_uri)
+        if not data:
+            return []
+        return data.get("FTPFileSubmissionErrors", data.get("Errors", []))
 
 
 if __name__=="__main__":

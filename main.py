@@ -17,6 +17,11 @@ def _measure(timer, name, **context):
     return timer.measure(name, **context)
 
 
+def _emit_progress(progress_callback, event, **payload):
+    if progress_callback is not None:
+        progress_callback({"event": event, **payload})
+
+
 def _get_pata_max_workers(config):
     value = os.getenv("PATA_MAX_WORKERS")
     if value is None and config:
@@ -30,6 +35,29 @@ def _get_pata_max_workers(config):
     except (TypeError, ValueError):
         logger.warning("Invalid PATA_MAX_WORKERS value %r. Falling back to 5.", value)
         return 5
+
+
+def _get_impact_delivery_mode(config, requested_mode=None):
+    value = requested_mode or os.getenv("IMPACT_DELIVERY_MODE")
+    if value is None and config:
+        value = config.get("impact_delivery_mode") or config.get("IMPACT_DELIVERY_MODE")
+
+    value = (value or "rest").strip().lower()
+    if value not in ("rest", "batch_sftp"):
+        logger.warning("Invalid impact delivery mode %r. Falling back to rest.", value)
+        return "rest"
+    return value
+
+
+def _append_action_record(actions_by_state, state, action_id, order_id, amount, reason):
+    actions_by_state[state].append(
+        {
+            "actionId": action_id,
+            "orderId": order_id,
+            "amount": amount,
+            "reason": reason,
+        }
+    )
 
 
 def _retrieve_pata_order(pata_client, market, order_uuid_str, campaign_id, action_id, order_id_impact, timer):
@@ -46,7 +74,16 @@ def _retrieve_pata_order(pata_client, market, order_uuid_str, campaign_id, actio
 
 class main:
 
-    def process_single_market(self, campaign_id, market, start_date=None, end_date=None, timer=None):
+    def process_single_market(
+        self,
+        campaign_id,
+        market,
+        start_date=None,
+        end_date=None,
+        timer=None,
+        progress_callback=None,
+        impact_delivery_mode=None,
+    ):
 
 
         with _measure(timer, "market.config_load", campaign_id=campaign_id, market=market):
@@ -76,7 +113,9 @@ class main:
             impact_client = ImpactClient(data, market=market)
             pata_client = PATAClient()
             pata_max_workers = _get_pata_max_workers(data)
+            impact_delivery_mode = _get_impact_delivery_mode(data, impact_delivery_mode)
             logger.info("Using %s PATA worker(s) for market %s.", pata_max_workers, market)
+            logger.info("Using %s Impact delivery mode for market %s.", impact_delivery_mode, market)
 
         # ✅ Fetch actions with robust error handling
         try:
@@ -103,6 +142,13 @@ class main:
             "Not_Processed": 0,
             "NONE": 0
         }
+        _emit_progress(
+            progress_callback,
+            "actions_loaded",
+            market=market,
+            total_actions=len(actions),
+            stats=stats.copy(),
+        )
         # Track action IDs for each state
         actions_by_state = {
             "OTHER": [],
@@ -139,6 +185,7 @@ class main:
                 )
 
         for idx, action in enumerate(actions):
+            order_id_impact = action.get("Oid")
             try:
                 order_id_impact = int(action.get("Oid"))
                 ad_id_impact = int(action.get("AdId"))
@@ -169,6 +216,7 @@ class main:
                     print(f"Order couldn't be retrieved from PATA /not processed {order_uuid_str}")
                     # actions_by_state["Not_Processed"].append(order_uuid_str)
                     actions_by_state["Not_Processed"].append({
+                        "actionId": action_id,
                         "orderId": order_id_impact,
                         "amount": None,
                         "reason": "Failed to process order"})
@@ -209,6 +257,18 @@ class main:
                 })
 
                 if reason in ("OTHER", "ITEM_RETURNED"):
+                    if impact_delivery_mode == "batch_sftp":
+                        stats[reason] += 1
+                        _append_action_record(
+                            actions_by_state,
+                            reason,
+                            action_id,
+                            order_id_impact,
+                            amount_without_vat,
+                            reason,
+                        )
+                        continue
+
                     with _measure(
                         timer,
                         "impact.reverse_action",
@@ -226,6 +286,7 @@ class main:
                         not_processed_ids.append({"market": market, "action_id": order_id_impact})
                         # actions_by_state["Not_Processed"].append(order_uuid_str)
                         actions_by_state["Not_Processed"].append({
+                            "actionId": action_id,
                             "orderId": order_id_impact,
                             "amount": None,
                             "reason": "Not Processed"})
@@ -234,13 +295,29 @@ class main:
                         continue
                     else:
                         stats[reason] += 1
-                        actions_by_state[reason].append({
-                            "orderId": order_id_impact,
-                            "amount": amount_without_vat,
-                            "reason": reason})
+                        _append_action_record(
+                            actions_by_state,
+                            reason,
+                            action_id,
+                            order_id_impact,
+                            amount_without_vat,
+                            reason,
+                        )
 
 
                 elif reason == "ORDER_UPDATE":
+                    if impact_delivery_mode == "batch_sftp":
+                        stats[reason] += 1
+                        _append_action_record(
+                            actions_by_state,
+                            reason,
+                            action_id,
+                            order_id_impact,
+                            amount_without_vat,
+                            reason,
+                        )
+                        continue
+
                     with _measure(
                         timer,
                         "impact.update_action",
@@ -258,6 +335,7 @@ class main:
                         not_processed_ids.append({"market": market, "action_id": order_id_impact})
                         # actions_by_state["Not_Processed"].append(order_uuid_str)
                         actions_by_state["Not_Processed"].append({
+                            "actionId": action_id,
                             "orderId": order_id_impact,
                             "amount": None,
                             "reason": "Not Processed"})
@@ -266,20 +344,28 @@ class main:
                     else:
                         stats[reason] += 1
                         # actions_by_state[reason].append(order_id_impact)
-                        actions_by_state[reason].append({
-                            "orderId": order_id_impact,
-                            "amount": amount_without_vat,
-                            "reason": reason})
+                        _append_action_record(
+                            actions_by_state,
+                            reason,
+                            action_id,
+                            order_id_impact,
+                            amount_without_vat,
+                            reason,
+                        )
 
 
                 else:
                     if reason in stats:
                         stats[reason] += 1
                         # actions_by_state[reason].append(order_id_impact)
-                        actions_by_state[reason].append({
-                            "orderId": order_id_impact,
-                            "amount": amount_without_vat,
-                            "reason": reason})
+                        _append_action_record(
+                            actions_by_state,
+                            reason,
+                            action_id,
+                            order_id_impact,
+                            amount_without_vat,
+                            reason,
+                        )
 
 
             except Exception as e:
@@ -287,11 +373,21 @@ class main:
                 stats["Not_Processed"] += 1
                 not_processed_ids.append({"market": market, "action_id": action.get("Id"), "error": str(e)})
                 actions_by_state["Not_Processed"].append({
+                    "actionId": action.get("Id"),
                     "orderId": order_id_impact,
                     "amount": None,
                     "reason": "Not Processed"})
                 # actions_by_state["Not_Processed"].append(order_uuid_str)
                 print(f"Order couldn't be processed {order_id_impact} {order_id_impact} ")
+            finally:
+                _emit_progress(
+                    progress_callback,
+                    "action_completed",
+                    market=market,
+                    processed_actions=idx + 1,
+                    total_actions=len(actions),
+                    stats=stats.copy(),
+                )
 
         if executor is not None:
             executor.shutdown(wait=True)
@@ -301,6 +397,13 @@ class main:
                 stats["Not_Processed"] + stats["OTHER"] + stats["ITEM_RETURNED"] + stats["ORDER_UPDATE"]
         )
         print(f"not modified: {stats["Not_Modified"]}")
+        _emit_progress(
+            progress_callback,
+            "market_finished",
+            market=market,
+            total_actions=len(actions),
+            stats=stats.copy(),
+        )
         all_processed_ids = (
                 actions_by_state["OTHER"] +
                 actions_by_state["ITEM_RETURNED"] +
@@ -314,6 +417,7 @@ class main:
 
             if action_id not in all_processed_ids:
                 actions_by_state["Not_Modified"].append({
+                    "actionId": action_id,
                     "orderId": order_id,
                     "amount": None,
                     "reason": "Not Modified"})

@@ -11,3 +11,4 @@ gunicorn
 pytz
 google-cloud-storage>=2.0.0
 tzdata
+paramiko~=3.5.1

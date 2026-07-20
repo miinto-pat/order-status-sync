@@ -18,10 +18,12 @@ class FakeSession:
         self.get_calls = []
         self.put_calls = []
         self.delete_calls = []
+        self.get_payloads = []
 
     def get(self, url, **kwargs):
         self.get_calls.append({"url": url, **kwargs})
-        return FakeResponse(payload={"Actions": []})
+        payload = self.get_payloads.pop(0) if self.get_payloads else {"Actions": []}
+        return FakeResponse(payload=payload)
 
     def put(self, url, **kwargs):
         self.put_calls.append({"url": url, **kwargs})
@@ -52,6 +54,28 @@ class ImpactClientSessionTests(unittest.TestCase):
         self.assertEqual(len(session.get_calls), 1)
         self.assertEqual(len(session.put_calls), 1)
         self.assertEqual(len(session.delete_calls), 1)
+
+    def test_ftp_submission_helpers_use_configured_session(self):
+        session = FakeSession()
+        session.get_payloads = [
+            {"FTPFileSubmissions": [{"FileName": "batch.csv", "Status": "Complete"}]},
+            {"BatchId": "F-1", "Status": "Complete"},
+            {"FTPFileSubmissionErrors": [{"Error": "BAD_DISPOSITION"}]},
+        ]
+        client = ImpactClient(
+            {"account_SID_DK": "sid", "token_DK": "token"},
+            "DK",
+            session=session,
+        )
+
+        submissions = client.list_ftp_submissions()
+        submission = client.retrieve_ftp_submission("/Advertisers/sid/FTPFileSubmissions/F-1")
+        errors = client.list_ftp_submission_errors("/Advertisers/sid/FTPFileSubmissions/F-1/ErrorDetails")
+
+        self.assertEqual(submissions, [{"FileName": "batch.csv", "Status": "Complete"}])
+        self.assertEqual(submission["BatchId"], "F-1")
+        self.assertEqual(errors, [{"Error": "BAD_DISPOSITION"}])
+        self.assertEqual(len(session.get_calls), 3)
 
 
 if __name__ == "__main__":
